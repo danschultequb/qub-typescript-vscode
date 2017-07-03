@@ -1,6 +1,6 @@
 {
   "name": "qub-vscode",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A collection of common data structures and functions that make creating Visual Studio Code extensions easier.",
   "main": "output/sources/Main",
   "typings": "output/sources/Main",
@@ -44,16 +44,16 @@
   },
   "devDependencies": {
     "@types/mocha": "^2.2.41",
-    "@types/node": "^7.0.18",
+    "@types/node": "^8.0.7",
     "coveralls": "^2.13.1",
-    "mocha": "^3.3.0",
-    "nyc": "^11.0.2",
+    "mocha": "^3.4.2",
+    "nyc": "^11.0.3",
     "open-cli": "^1.0.5",
     "source-map-support": "^0.4.15",
-    "typescript": "^2.3.2"
+    "typescript": "^2.4.1"
   },
   "dependencies": {
     "qub": "^1.2.2",
-    "vscode": "^1.1.1"
+    "vscode": "^1.1.2"
   }
 }
