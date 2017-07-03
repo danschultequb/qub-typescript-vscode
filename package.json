@@ -1,0 +1,59 @@
+{
+  "name": "qub-vscode",
+  "version": "1.0.0",
+  "description": "A collection of common data structures and functions that make creating Visual Studio Code extensions easier.",
+  "main": "output/sources/Main",
+  "typings": "output/sources/Main",
+  "files": [
+    "output/sources/"
+  ],
+  "scripts": {
+    "build": "tsc -p .",
+    "prepublish": "npm run build",
+    "test": "mocha --colors --require source-map-support/register --ui tdd output/tests/",
+    "coverage": "nyc npm test && open-cli output/coverage/index.html",
+    "travis-test": "nyc --check-coverage --functions 100 --lines 100 --branches 100 --statements 100 --reporter=text-lcov npm test | coveralls",
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
+  "nyc": {
+    "reporter": [
+      "html",
+      "text-summary"
+    ],
+    "report-dir": "output/coverage/",
+    "temp-directory": "output/.nyc_output/",
+    "exclude": [
+      "output/tests"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danschultequb/qub-typescript-vscode.git"
+  },
+  "keywords": [
+    "qub"
+  ],
+  "author": "Dan Schulte",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/danschultequb/qub-typescript-vscode/issues"
+  },
+  "homepage": "https://github.com/danschultequb/qub-typescript-vscode#readme",
+  "engines": {
+    "vscode": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.41",
+    "@types/node": "^7.0.18",
+    "coveralls": "^2.13.1",
+    "mocha": "^3.3.0",
+    "nyc": "^11.0.2",
+    "open-cli": "^1.0.5",
+    "source-map-support": "^0.4.15",
+    "typescript": "^2.3.2"
+  },
+  "dependencies": {
+    "qub": "^1.2.2",
+    "vscode": "^1.1.1"
+  }
+}

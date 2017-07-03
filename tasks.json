@@ -1,0 +1,6 @@
+{
+  "$schema": "./tasks.schema.json",
+  "ActiveTasks": {},
+  "PlannedTasks": {},
+  "CompletedTasks": {}
+}

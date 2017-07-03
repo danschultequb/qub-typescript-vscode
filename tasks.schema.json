@@ -1,0 +1,180 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "Dan's Task JSON Schema",
+    "description": "The schema for Dan's JSON task files",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "enum": [
+                "./tasks.schema.json"
+            ]
+        },
+        "ActiveTasks": {
+            "$ref": "#/definitions/ActiveTaskGroup"
+        },
+        "PlannedTasks": {
+            "$ref": "#/definitions/PlannedTaskGroup"
+        },
+        "CompletedTasks": {
+            "additionalProperties": {
+                "$ref": "#/definitions/CompletedTask"
+            }
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "$schema",
+        "ActiveTasks",
+        "PlannedTasks",
+        "CompletedTasks"
+    ],
+    "definitions": {
+        "ActiveTask": {
+            "properties": {
+                "Conceived": {
+                    "$ref": "#/definitions/ConceivedDate"
+                },
+                "Started": {
+                    "$ref": "#/definitions/StartedDate"
+                },
+                "Deadline": {
+                    "$ref": "#/definitions/DeadlineDate"
+                },
+                "ActiveTasks": {
+                    "$ref": "#/definitions/ActiveTaskGroup"
+                },
+                "PlannedTasks": {
+                    "$ref": "#/definitions/PlannedTaskGroup"
+                },
+                "CompletedTasks": {
+                    "$ref": "#/definitions/CompletedTaskGroup"
+                },
+                "Notes": {}
+            },
+            "required": [
+                "Conceived",
+                "Started"
+            ],
+            "additionalProperties": false
+        },
+        "PlannedTask": {
+            "properties": {
+                "PlannedTasks": {
+                    "$ref": "#/definitions/PlannedTaskGroup"
+                },
+                "CompletedTasks": {
+                    "$ref": "#/definitions/CompletedTaskGroup"
+                },
+                "Conceived": {
+                    "$ref": "#/definitions/ConceivedDate"
+                },
+                "Started": {
+                    "$ref": "#/definitions/StartedDate"
+                },
+                "Deadline": {
+                    "$ref": "#/definitions/DeadlineDate"
+                },
+                "Notes": {}
+            },
+            "required": [
+                "Conceived"
+            ],
+            "additionalProperties": false
+        },
+        "CompletedTask": {
+            "oneOf": [
+                {
+                    "properties": {
+                        "CompletedTasks": {
+                            "$ref": "#/definitions/CompletedTaskGroup"
+                        },
+                        "Conceived": {
+                            "$ref": "#/definitions/ConceivedDate"
+                        },
+                        "Started": {
+                            "$ref": "#/definitions/StartedDate"
+                        },
+                        "Completed": {
+                            "$ref": "#/definitions/CompletedDate"
+                        },
+                        "Deadline": {
+                            "$ref": "#/definitions/DeadlineDate"
+                        },
+                        "Notes": {}
+                    },
+                    "required": [
+                        "Conceived",
+                        "Started",
+                        "Completed"
+                    ],
+                    "additionalProperties": false
+                },
+                {
+                    "properties": {
+                        "CompletedTasks": {
+                            "$ref": "#/definitions/CompletedTaskGroup"
+                        },
+                        "Conceived": {
+                            "$ref": "#/definitions/ConceivedDate"
+                        },
+                        "Started": {
+                            "$ref": "#/definitions/StartedDate"
+                        },
+                        "Abandoned": {
+                            "$ref": "#/definitions/AbandonedDate"
+                        },
+                        "Deadline": {
+                            "$ref": "#/definitions/DeadlineDate"
+                        },
+                        "Notes": {}
+                    },
+                    "required": [
+                        "Conceived",
+                        "Abandoned"
+                    ],
+                    "additionalProperties": false
+                }
+            ]
+        },
+        "ActiveTaskGroup": {
+            "additionalProperties": {
+                "$ref": "#/definitions/ActiveTask"
+            }
+        },
+        "PlannedTaskGroup": {
+            "additionalProperties": {
+                "$ref": "#/definitions/PlannedTask"
+            }
+        },
+        "CompletedTaskGroup": {
+            "additionalProperties": {
+                "$ref": "#/definitions/CompletedTask"
+            }
+        },
+        "ConceivedDate": {
+            "type": "string",
+            "pattern": "^201[6-7]-[0-1][0-9]-[0-3][0-9]$",
+            "description": "The date on which this task was originally thought of."
+        },
+        "StartedDate": {
+            "type": "string",
+            "pattern": "^201[6-7]-[0-1][0-9]-[0-3][0-9]$",
+            "description": "The date on which work on this task started."
+        },
+        "CompletedDate": {
+            "type": "string",
+            "pattern": "^201[6-7]-[0-1][0-9]-[0-3][0-9]$",
+            "description": "The date on which this task was completed."
+        },
+        "AbandonedDate": {
+            "type": "string",
+            "pattern": "^201[6-7]-[0-1][0-9]-[0-3][0-9]$",
+            "description": "The date on which this task was abandoned."
+        },
+        "DeadlineDate": {
+            "type": "string",
+            "pattern": "^201[6-7]-[0-1][0-9]-[0-3][0-9]$",
+            "description": "The date on which this task must be completed."
+        }
+    }
+}
