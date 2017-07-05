@@ -62,4 +62,42 @@ suite("Interfaces", () => {
             assert.deepStrictEqual(change.text, "HAPPY");
         });
     });
+
+    class PlainTextDocument implements interfaces.TextDocument {
+        constructor(private _uri: string, private _text: string) {
+        }
+
+        public getLanguageId(): string {
+            return "txt";
+        }
+
+        public getURI(): string {
+            return this._uri;
+        }
+
+        public getText(): string {
+            return this._text;
+        }
+
+        public getLineIndex(characterIndex: number): number {
+            return qub.getLineIndex(this._text, characterIndex);
+        }
+
+        public getColumnIndex(characterIndex: number): number {
+            return qub.getColumnIndex(this._text, characterIndex);
+        }
+
+        public getLineIndent(characterIndex: number): string {
+            return qub.getLineIndent(this._text, characterIndex);
+        }
+    }
+
+    suite("ParsedDocumentChange", () => {
+        test(`constructor()`, () => {
+            const parsedDocument = new mocks.TextDocument("MOCK_LANGUAGE_ID", "mock://document.uri");
+            const editor = new mocks.TextEditor(parsedDocument);
+            const change = new interfaces.ParsedDocumentChange(parsedDocument, editor, new qub.Span(0, 1), "Hello!");
+            assert.deepStrictEqual(change.parsedDocument, parsedDocument);
+        });
+    });
 });

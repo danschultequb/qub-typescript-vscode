@@ -241,4 +241,98 @@ suite("Mocks", () => {
             setNewLineTest("\r\n");
         });
     });
+
+    suite("Platform", () => {
+        test("constructor()", () => {
+            const platform = new mocks.Platform();
+            assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+            assert.deepStrictEqual(platform.getCursorIndex(), undefined);
+            assert.deepStrictEqual(platform.getConfiguration(), undefined);
+            assert.deepStrictEqual(platform.getLocale(), "MOCK_LOCALE");
+            assert.deepStrictEqual(platform.getMachineId(), "MOCK_MACHINE_ID");
+            assert.deepStrictEqual(platform.getSessionId(), "MOCK_SESSION_ID");
+            assert.deepStrictEqual(platform.getOperatingSystem(), "MOCK_OPERATING_SYSTEM");
+            assert.deepStrictEqual(platform.getConsoleLogs().toArray(), []);
+        });
+
+        test("dispose()", () => {
+            const platform = new mocks.Platform();
+            platform.dispose();
+            assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+            assert.deepStrictEqual(platform.getCursorIndex(), undefined);
+            assert.deepStrictEqual(platform.getConfiguration(), undefined);
+            assert.deepStrictEqual(platform.getLocale(), "MOCK_LOCALE");
+            assert.deepStrictEqual(platform.getMachineId(), "MOCK_MACHINE_ID");
+            assert.deepStrictEqual(platform.getSessionId(), "MOCK_SESSION_ID");
+            assert.deepStrictEqual(platform.getOperatingSystem(), "MOCK_OPERATING_SYSTEM");
+            assert.deepStrictEqual(platform.getConsoleLogs().toArray(), []);
+        });
+    });
+
+    suite("PlaintextDocument", () => {
+        test("constructor()", () => {
+            const document = new mocks.PlaintextDocument("I'm some plaintext.");
+            assert.deepStrictEqual(document.getText(), "I'm some plaintext.");
+        });
+    });
+
+    suite("PlaintextLanguageExtension", () => {
+        suite("isParsable()", () => {
+            test("with undefined", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                assert.deepStrictEqual(extension.isParsable(undefined), false);
+            });
+
+            test("with null", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                assert.deepStrictEqual(extension.isParsable(null), false);
+            });
+
+            test("with document with no language id", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                const document = new mocks.TextDocument(undefined, "mock://document.uri");
+                assert.deepStrictEqual(extension.isParsable(document), false);
+            });
+
+            test("with XML document", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                const document = new mocks.TextDocument("xml", "mock://document.uri");
+                assert.deepStrictEqual(extension.isParsable(document), false);
+            });
+
+            test("with TXT document", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                const document = new mocks.TextDocument("TXT", "mock://document.uri");
+                assert.deepStrictEqual(extension.isParsable(document), false);
+            });
+
+            test("with txt document", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                const document = new mocks.TextDocument("txt", "mock://document.uri");
+                assert.deepStrictEqual(extension.isParsable(document), true);
+            });
+        });
+
+        suite("parseDocument()", () => {
+            test(`with undefined`, () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                assert.deepStrictEqual(extension.parseDocument(undefined), new mocks.PlaintextDocument(undefined));
+            });
+
+            test(`with null`, () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                assert.deepStrictEqual(extension.parseDocument(null), new mocks.PlaintextDocument(null));
+            });
+
+            test(`with ""`, () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                assert.deepStrictEqual(extension.parseDocument(""), new mocks.PlaintextDocument(""));
+            });
+
+            test(`with "Shopping List:"`, () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                assert.deepStrictEqual(extension.parseDocument("Shopping List:"), new mocks.PlaintextDocument("Shopping List:"));
+            });
+        });
+    });
 });
