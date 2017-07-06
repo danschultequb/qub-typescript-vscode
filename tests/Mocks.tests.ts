@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as qub from "qub";
 
+import * as interfaces from "../sources/Interfaces";
 import * as mocks from "../sources/Mocks";
 
 suite("Mocks", () => {
@@ -266,6 +267,310 @@ suite("Mocks", () => {
             assert.deepStrictEqual(platform.getSessionId(), "MOCK_SESSION_ID");
             assert.deepStrictEqual(platform.getOperatingSystem(), "MOCK_OPERATING_SYSTEM");
             assert.deepStrictEqual(platform.getConsoleLogs().toArray(), []);
+        });
+
+        suite("getHoverAt()", () => {
+            test(`with no hover provider`, () => {
+                const platform = new mocks.Platform();
+                assert.deepStrictEqual(platform.getHoverAt(0), undefined);
+            });
+
+            test(`with no activeTextEditor`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideHoverCallback("txt",
+                    (textDocument: interfaces.TextDocument, characterIndex: number) => {
+                        return new interfaces.Hover(["Hello!"], new qub.Span(0, 1));
+                    });
+                assert.deepStrictEqual(platform.getHoverAt(0), undefined);
+            });
+
+            test(`with undefined characterIndex`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideHoverCallback("txt",
+                    (textDocument: interfaces.TextDocument, characterIndex: number) => {
+                        return new interfaces.Hover(["Hello!"], new qub.Span(0, 1));
+                    });
+                platform.setActiveTextEditor(new mocks.TextEditor(new mocks.TextDocument("txt", "mock://document.uri", "Hello?")));
+                assert.deepStrictEqual(platform.getHoverAt(undefined), undefined);
+            });
+
+            test(`with no active document`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideHoverCallback("txt",
+                    (textDocument: interfaces.TextDocument, characterIndex: number) => {
+                        return new interfaces.Hover(["Hello!"], new qub.Span(0, 1));
+                    });
+                platform.setActiveTextEditor(new mocks.TextEditor(undefined));
+                assert.deepStrictEqual(platform.getHoverAt(3), undefined);
+            });
+
+            test(`with hover provider, activeTextEditor, and defined characterIndex`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideHoverCallback("txt",
+                    (textDocument: interfaces.TextDocument, characterIndex: number) => {
+                        return new interfaces.Hover(["Hello!"], new qub.Span(0, 1));
+                    });
+                platform.setActiveTextEditor(new mocks.TextEditor(new mocks.TextDocument("txt", "mock://document.uri", "Hello?")));
+                assert.deepStrictEqual(platform.getHoverAt(3), new interfaces.Hover(["Hello!"], new qub.Span(0, 1)));
+            });
+        });
+
+        suite("getCompletionsAt()", () => {
+            test(`with no completion provider`, () => {
+                const platform = new mocks.Platform();
+                assert.deepStrictEqual(platform.getCompletionsAt(0).toArray(), []);
+            });
+
+            test(`with no activeTextEditor`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideCompletionsCallback("txt", [],
+                    (textDocument: interfaces.TextDocument, characterIndex: number) => {
+                        return new qub.SingleLinkList<interfaces.Completion>([
+                            new interfaces.Completion("Hello", new qub.Span(0, 1), "A friendly greeting.")
+                        ]);
+                    });
+                assert.deepStrictEqual(platform.getCompletionsAt(0).toArray(), []);
+            });
+
+            test(`with undefined characterIndex`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideCompletionsCallback("txt", [],
+                    (textDocument: interfaces.TextDocument, characterIndex: number) => {
+                        return new qub.SingleLinkList<interfaces.Completion>([
+                            new interfaces.Completion("Hello", new qub.Span(0, 1), "A friendly greeting.")
+                        ]);
+                    });
+                platform.setActiveTextEditor(new mocks.TextEditor(new mocks.TextDocument("txt", "mock://document.uri", "Hello?")));
+                assert.deepStrictEqual(platform.getCompletionsAt(undefined).toArray(), []);
+            });
+
+            test(`with no active document`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideCompletionsCallback("txt", [],
+                    (textDocument: interfaces.TextDocument, characterIndex: number) => {
+                        return new qub.SingleLinkList<interfaces.Completion>([
+                            new interfaces.Completion("Hello", new qub.Span(0, 1), "A friendly greeting.")
+                        ]);
+                    });
+                platform.setActiveTextEditor(new mocks.TextEditor(undefined));
+                assert.deepStrictEqual(platform.getCompletionsAt(3).toArray(), []);
+            });
+
+            test(`with hover provider, activeTextEditor, and defined characterIndex`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideCompletionsCallback("txt", [],
+                    (textDocument: interfaces.TextDocument, characterIndex: number) => {
+                        return new qub.SingleLinkList<interfaces.Completion>([
+                            new interfaces.Completion("Hello", new qub.Span(0, 1), "A friendly greeting.")
+                        ]);
+                    });
+                platform.setActiveTextEditor(new mocks.TextEditor(new mocks.TextDocument("txt", "mock://document.uri", "Hello?")));
+                assert.deepStrictEqual(platform.getCompletionsAt(3).toArray(), [
+                    new interfaces.Completion("Hello", new qub.Span(0, 1), "A friendly greeting.")
+                ]);
+            });
+        });
+
+        suite("getFormattedDocument()", () => {
+            test(`with no format provider`, () => {
+                const platform = new mocks.Platform();
+                assert.deepStrictEqual(platform.getFormattedDocument(), undefined);
+            });
+
+            test(`with no activeTextEditor`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideFormattedDocumentTextCallback("txt",
+                    (textDocument: interfaces.TextDocument) => {
+                        return "abcd";
+                    });
+                assert.deepStrictEqual(platform.getFormattedDocument(), undefined);
+            });
+
+            test(`with no active document`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideFormattedDocumentTextCallback("txt",
+                    (textDocument: interfaces.TextDocument) => {
+                        return "abcd";
+                    });
+                platform.setActiveTextEditor(new mocks.TextEditor(undefined));
+                assert.deepStrictEqual(platform.getFormattedDocument(), undefined);
+            });
+
+            test(`with format provider and activeTextEditor`, () => {
+                const platform = new mocks.Platform();
+                platform.setProvideFormattedDocumentTextCallback("txt",
+                    (textDocument: interfaces.TextDocument) => {
+                        return "abcd";
+                    });
+                platform.setActiveTextEditor(new mocks.TextEditor(new mocks.TextDocument("txt", "mock://document.uri", "Hello?")));
+                assert.deepStrictEqual(platform.getFormattedDocument(), "abcd");
+            });
+        });
+
+        suite("addInstalledExtension()", () => {
+            function addInstalledExtensionTest(publisherName: string, extensionName: string): void {
+                test(`with ${qub.escapeAndQuote(publisherName)} publisher name and ${qub.escapeAndQuote(extensionName)} extension name`, () => {
+                    const platform = new mocks.Platform();
+                    assert.deepStrictEqual(platform.isExtensionInstalled(publisherName, extensionName), false);
+
+                    platform.addInstalledExtension(publisherName, extensionName);
+                    assert.deepStrictEqual(platform.isExtensionInstalled(publisherName, extensionName), true);
+
+                    platform.addInstalledExtension(publisherName, extensionName);
+                    assert.deepStrictEqual(platform.isExtensionInstalled(publisherName, extensionName), true);
+                });
+            }
+
+            addInstalledExtensionTest(undefined, undefined);
+            addInstalledExtensionTest(undefined, null);
+            addInstalledExtensionTest(undefined, "");
+            addInstalledExtensionTest(undefined, "myExtension");
+
+            addInstalledExtensionTest(null, undefined);
+            addInstalledExtensionTest(null, null);
+            addInstalledExtensionTest(null, "");
+            addInstalledExtensionTest(null, "myExtension");
+
+            addInstalledExtensionTest("", undefined);
+            addInstalledExtensionTest("", null);
+            addInstalledExtensionTest("", "");
+            addInstalledExtensionTest("", "myExtension");
+
+            addInstalledExtensionTest("myPublisher", undefined);
+            addInstalledExtensionTest("myPublisher", null);
+            addInstalledExtensionTest("myPublisher", "");
+            addInstalledExtensionTest("myPublisher", "myExtension");
+        });
+
+        suite("setActiveTextEditor()", () => {
+            test(`when undefined, set to undefined`, () => {
+                const platform = new mocks.Platform();
+                let changed: boolean = false;
+                platform.setActiveEditorChangedCallback((newActiveTextEditor: interfaces.TextEditor) => {
+                    changed = true;
+                });
+                assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+
+                platform.setActiveTextEditor(undefined);
+
+                assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+                assert.deepStrictEqual(changed, false);
+            });
+
+            test(`when undefined, set to not undefined with no callback`, () => {
+                const platform = new mocks.Platform();
+                assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+
+                platform.setActiveTextEditor(new mocks.TextEditor(undefined));
+
+                assert.deepStrictEqual(platform.getActiveTextEditor(), new mocks.TextEditor(undefined));
+            });
+
+            test(`when undefined, set to not undefined with a callback`, () => {
+                const platform = new mocks.Platform();
+                let changed: boolean = false;
+                platform.setActiveEditorChangedCallback((newActiveTextEditor: interfaces.TextEditor) => {
+                    changed = true;
+                });
+                assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+
+                platform.setActiveTextEditor(new mocks.TextEditor(undefined));
+
+                assert.deepStrictEqual(platform.getActiveTextEditor(), new mocks.TextEditor(undefined));
+                assert.deepStrictEqual(changed, true);
+            });
+        });
+
+        suite("getCursorIndex()", () => {
+            test(`with no active text editor`, () => {
+                const platform = new mocks.Platform();
+                assert.deepStrictEqual(platform.getCursorIndex(), undefined);
+            });
+
+            test(`with no active text document`, () => {
+                const platform = new mocks.Platform();
+                platform.setActiveTextEditor(new mocks.TextEditor(undefined));
+                assert.deepStrictEqual(platform.getCursorIndex(), 0);
+            });
+        });
+
+        suite("setCursorIndex()", () => {
+            test(`with no active text editor`, () => {
+                const platform = new mocks.Platform();
+                platform.setCursorIndex(15);
+                assert.deepStrictEqual(platform.getCursorIndex(), undefined);
+            });
+
+            test(`with no active text document`, () => {
+                const platform = new mocks.Platform();
+                platform.setActiveTextEditor(new mocks.TextEditor(undefined));
+                platform.setCursorIndex(14);
+                assert.deepStrictEqual(platform.getCursorIndex(), 14);
+            });
+        });
+
+        suite("openTextDocument()", () => {
+            test(`with no open text document callback and undefined text document`, () => {
+                const platform = new mocks.Platform();
+                assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+
+                platform.openTextDocument(undefined);
+                assert.deepStrictEqual(platform.getActiveTextEditor(), new mocks.TextEditor(undefined));
+            });
+
+            test(`with open text document callback and text document`, () => {
+                const platform = new mocks.Platform();
+                assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+
+                let openedDocument: interfaces.TextDocument;
+                platform.setTextDocumentOpenedCallback((openedTextDocument: interfaces.TextDocument) => {
+                    openedDocument = openedTextDocument;
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("A", "B", "C"));
+                assert.deepStrictEqual(platform.getActiveTextEditor(), new mocks.TextEditor(new mocks.TextDocument("A", "B", "C")));
+                assert.deepStrictEqual(openedDocument, new mocks.TextDocument("A", "B", "C"));
+            });
+        });
+
+        suite("saveTextDocument()", () => {
+            test(`with no save text document callback and undefined text document`, () => {
+                const platform = new mocks.Platform();
+                platform.saveTextDocument(undefined);
+            });
+
+            test(`with save text document callback and text document`, () => {
+                const platform = new mocks.Platform();
+
+                let savedDocument: interfaces.TextDocument;
+                platform.setTextDocumentSavedCallback((savedTextDocument: interfaces.TextDocument) => {
+                    savedDocument = savedTextDocument;
+                });
+
+                platform.saveTextDocument(new mocks.TextDocument("A", "B", "C"));
+                assert.deepStrictEqual(savedDocument, new mocks.TextDocument("A", "B", "C"));
+            });
+        });
+
+        suite("closeTextDocument()", () => {
+            test(`with no close text document callback and no active text document`, () => {
+                const platform = new mocks.Platform();
+                platform.closeTextDocument(undefined);
+                assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+            });
+
+            test(`with close text document callback and no active text document`, () => {
+                const platform = new mocks.Platform();
+
+                let closedDocument: interfaces.TextDocument;
+                platform.setTextDocumentClosedCallback((closedTextDocument: interfaces.TextDocument) => {
+                    closedDocument = closedTextDocument;
+                });
+
+                platform.closeTextDocument(new mocks.TextDocument("A", "B", "C"));
+                assert.deepStrictEqual(closedDocument, new mocks.TextDocument("A", "B", "C"));
+                assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+            });
         });
     });
 

@@ -221,7 +221,7 @@ export interface Platform extends Disposable {
      * Set the cursor index of the active text editor. If no text editor is active, then this
      * function will do nothing.
      */
-    setCursorIndex(cursorIndex: number): void;
+    setCursorIndex(cursorCharacterIndex: number): void;
 
     /**
      * Set the function to call when the active text editor in VSCode is changed.
@@ -257,13 +257,13 @@ export interface Platform extends Disposable {
      * Set the function to call when the cursor hovers over a text document with the provided
      * language identifier.
      */
-    setProvideHoverCallback(languageId: string, callback: (textDocument: TextDocument, index: number) => Hover): Disposable;
+    setProvideHoverCallback(languageId: string, callback: (textDocument: TextDocument, characterIndex: number) => Hover): Disposable;
 
     /**
      * Set the function to call when one of the completion trigger characters is pressed on a text
      * document with provided language identifier.
      */
-    setProvideCompletionsCallback(languageId: string, completionTriggerCharacters: string[], callback: (textDocument: TextDocument, index: number) => qub.Iterable<Completion>): Disposable;
+    setProvideCompletionsCallback(languageId: string, completionTriggerCharacters: string[], callback: (textDocument: TextDocument, characterIndex: number) => qub.Iterable<Completion>): Disposable;
 
     setProvideFormattedDocumentTextCallback(languageId: string, callback: (textDocument: TextDocument) => string): Disposable;
 

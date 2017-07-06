@@ -142,7 +142,7 @@ export class TextEditor implements interfaces.TextEditor {
 }
 
 export class Platform implements interfaces.Platform {
-    private _activeTextEditor: TextEditor;
+    private _activeTextEditor: interfaces.TextEditor;
     private _configuration: interfaces.Configuration;
     private _installedExtensions = new qub.Map<string, qub.List<string>>();
 
@@ -164,13 +164,13 @@ export class Platform implements interfaces.Platform {
     /**
      * Invoke a hover action at the provided index of the active text editor.
      */
-    public getHoverAt(index: number): interfaces.Hover {
+    public getHoverAt(characterIndex: number): interfaces.Hover {
         let result: interfaces.Hover;
 
-        if (this._provideHover && qub.isDefined(index) && this._activeTextEditor) {
-            const activeDocument: TextDocument = this._activeTextEditor.getDocument();
+        if (this._provideHover && qub.isDefined(characterIndex) && this._activeTextEditor) {
+            const activeDocument: interfaces.TextDocument = this._activeTextEditor.getDocument();
             if (activeDocument) {
-                result = this._provideHover(activeDocument, index);
+                result = this._provideHover(activeDocument, characterIndex);
             }
         }
 
@@ -184,7 +184,7 @@ export class Platform implements interfaces.Platform {
         let result: qub.Iterable<interfaces.Completion>;
 
         if (this._provideCompletions && qub.isDefined(index) && this._activeTextEditor) {
-            const activeDocument: TextDocument = this._activeTextEditor.getDocument();
+            const activeDocument: interfaces.TextDocument = this._activeTextEditor.getDocument();
             if (activeDocument) {
                 result = this._provideCompletions(activeDocument, index);
             }
@@ -201,7 +201,7 @@ export class Platform implements interfaces.Platform {
         let result: string;
 
         if (this._provideFormattedDocument && this._activeTextEditor) {
-            const activeDocument: TextDocument = this._activeTextEditor.getDocument();
+            const activeDocument: interfaces.TextDocument = this._activeTextEditor.getDocument();
             if (activeDocument) {
                 result = this._provideFormattedDocument(activeDocument);
             }
@@ -225,11 +225,11 @@ export class Platform implements interfaces.Platform {
         }
     }
 
-    public getActiveTextEditor(): TextEditor {
+    public getActiveTextEditor(): interfaces.TextEditor {
         return this._activeTextEditor;
     }
 
-    public setActiveTextEditor(activeTextEditor: TextEditor): void {
+    public setActiveTextEditor(activeTextEditor: interfaces.TextEditor): void {
         if (this._activeTextEditor !== activeTextEditor) {
             this._activeTextEditor = activeTextEditor;
 
@@ -268,7 +268,7 @@ export class Platform implements interfaces.Platform {
             this._textDocumentClosed(textDocument);
         }
 
-        const activeTextEditor: TextEditor = this.getActiveTextEditor();
+        const activeTextEditor: interfaces.TextEditor = this.getActiveTextEditor();
         if (activeTextEditor && activeTextEditor.getDocument() === textDocument) {
             this.setActiveTextEditor(null);
         }
