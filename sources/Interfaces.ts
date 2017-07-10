@@ -298,11 +298,6 @@ export interface Platform extends Disposable {
      * Get a string identifier for the operating system that VS Code is running on.
      */
     getOperatingSystem(): string;
-
-    /**
-     * Write the provided message to the console.
-     */
-    consoleLog(message: string): void;
 }
 
 /**
@@ -646,22 +641,5 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
         }
 
         return formattedText;
-    }
-
-    /**
-     * Write the provided message to the console, with the extension's name added to the front.
-     */
-    public consoleLog(message: string): void {
-        this._platform.consoleLog(`${this._extensionName}: ${message}`);
-    }
-
-    public consoleTrace<ResultType>(functionName: string, action: () => ResultType): ResultType {
-        this.consoleLog(`${functionName} - Enter`);
-
-        const result: ResultType = action();
-
-        this.consoleLog(`${functionName} - Exit`);
-
-        return result;
     }
 }

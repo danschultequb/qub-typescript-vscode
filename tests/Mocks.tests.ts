@@ -253,7 +253,6 @@ suite("Mocks", () => {
             assert.deepStrictEqual(platform.getMachineId(), "MOCK_MACHINE_ID");
             assert.deepStrictEqual(platform.getSessionId(), "MOCK_SESSION_ID");
             assert.deepStrictEqual(platform.getOperatingSystem(), "MOCK_OPERATING_SYSTEM");
-            assert.deepStrictEqual(platform.getConsoleLogs().toArray(), []);
         });
 
         test("dispose()", () => {
@@ -266,7 +265,6 @@ suite("Mocks", () => {
             assert.deepStrictEqual(platform.getMachineId(), "MOCK_MACHINE_ID");
             assert.deepStrictEqual(platform.getSessionId(), "MOCK_SESSION_ID");
             assert.deepStrictEqual(platform.getOperatingSystem(), "MOCK_OPERATING_SYSTEM");
-            assert.deepStrictEqual(platform.getConsoleLogs().toArray(), []);
         });
 
         suite("getHoverAt()", () => {
@@ -570,6 +568,172 @@ suite("Mocks", () => {
                 platform.closeTextDocument(new mocks.TextDocument("A", "B", "C"));
                 assert.deepStrictEqual(closedDocument, new mocks.TextDocument("A", "B", "C"));
                 assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+            });
+
+            test(`with close text document callback and different active text document`, () => {
+                const platform = new mocks.Platform();
+
+                let closedDocument: interfaces.TextDocument;
+                platform.setTextDocumentClosedCallback((closedTextDocument: interfaces.TextDocument) => {
+                    closedDocument = closedTextDocument;
+                });
+
+                platform.setActiveTextEditor(new mocks.TextEditor(new mocks.TextDocument("A", "B", "C")));
+
+                platform.closeTextDocument(new mocks.TextDocument("D", "E", "F"));
+                assert.deepStrictEqual(closedDocument, new mocks.TextDocument("D", "E", "F"));
+                assert.deepStrictEqual(platform.getActiveTextEditor(), new mocks.TextEditor(new mocks.TextDocument("A", "B", "C")));
+            });
+
+            test(`with close text document callback and equal active text document`, () => {
+                const platform = new mocks.Platform();
+
+                let closedDocument: interfaces.TextDocument;
+                platform.setTextDocumentClosedCallback((closedTextDocument: interfaces.TextDocument) => {
+                    closedDocument = closedTextDocument;
+                });
+
+                const activeTextDocument = new mocks.TextDocument("A", "B", "C");
+                platform.setActiveTextEditor(new mocks.TextEditor(activeTextDocument));
+
+                platform.closeTextDocument(new mocks.TextDocument("A", "B", "C"));
+                assert.deepStrictEqual(closedDocument, activeTextDocument);
+                assert.deepStrictEqual(platform.getActiveTextEditor(), new mocks.TextEditor(activeTextDocument));
+            });
+
+            test(`with close text document callback and same active text document`, () => {
+                const platform = new mocks.Platform();
+
+                let closedDocument: interfaces.TextDocument;
+                platform.setTextDocumentClosedCallback((closedTextDocument: interfaces.TextDocument) => {
+                    closedDocument = closedTextDocument;
+                });
+
+                const activeTextDocument = new mocks.TextDocument("A", "B", "C");
+                platform.setActiveTextEditor(new mocks.TextEditor(activeTextDocument));
+
+                platform.closeTextDocument(activeTextDocument);
+                assert.deepStrictEqual(closedDocument, activeTextDocument);
+                assert.deepStrictEqual(platform.getActiveTextEditor(), undefined);
+            });
+        });
+
+        suite("insertText()", () => {
+            test(`with no active text editor`, () => {
+                const platform = new mocks.Platform();
+
+                let documentChange: interfaces.TextDocumentChange;
+                platform.setTextDocumentChangedCallback((textDocumentChange: interfaces.TextDocumentChange) => {
+                    documentChange = textDocumentChange;
+                });
+
+                platform.insertText(0, "test");
+
+                assert.deepStrictEqual(documentChange, undefined);
+            });
+
+            test(`with no active text document`, () => {
+                const platform = new mocks.Platform();
+
+                let documentChange: interfaces.TextDocumentChange;
+                platform.setTextDocumentChangedCallback((textDocumentChange: interfaces.TextDocumentChange) => {
+                    documentChange = textDocumentChange;
+                });
+                platform.setActiveTextEditor(new mocks.TextEditor(undefined));
+
+                platform.insertText(0, "test");
+
+                assert.deepStrictEqual(documentChange, undefined);
+            });
+
+            test(`with active text document but no text document change callback`, () => {
+                const platform = new mocks.Platform();
+
+                platform.setActiveTextEditor(new mocks.TextEditor(new mocks.TextDocument("A", "B", "C")));
+
+                platform.insertText(0, "test");
+
+                assert.deepStrictEqual(platform.getActiveTextEditor().getDocument().getText(), "testC");
+                assert.deepStrictEqual(platform.getCursorIndex(), 4);
+            });
+
+            test(`with active text document and text document change callback`, () => {
+                const platform = new mocks.Platform();
+
+                platform.setActiveTextEditor(new mocks.TextEditor(new mocks.TextDocument("A", "B", "C")));
+
+                let change: interfaces.TextDocumentChange;
+                platform.setTextDocumentChangedCallback((textDocumentChange: interfaces.TextDocumentChange) => {
+                    change = textDocumentChange;
+                });
+
+                platform.insertText(0, "test");
+
+                assert.deepStrictEqual(platform.getActiveTextEditor().getDocument().getText(), "testC");
+                assert.deepStrictEqual(platform.getCursorIndex(), 4);
+
+                const changeEditor = new mocks.TextEditor(new mocks.TextDocument("A", "B", "testC"));
+                changeEditor.setCursorIndex(4);
+                assert.deepStrictEqual(change, new interfaces.TextDocumentChange(changeEditor, new qub.Span(0, 0), "test"));
+            });
+        });
+
+        suite("setConfigurationChangedCallback()", () => {
+            test("with undefined", () => {
+                const platform = new mocks.Platform();
+                platform.setConfigurationChangedCallback(undefined);
+            });
+
+            test("with null", () => {
+                const platform = new mocks.Platform();
+                platform.setConfigurationChangedCallback(null);
+            });
+        });
+
+        suite("setTextDocumentIssues()", () => {
+            test("with undefined arguments", () => {
+                const platform = new mocks.Platform();
+                platform.setTextDocumentIssues(undefined, undefined, undefined);
+            });
+        });
+
+        suite("setConfiguration()", () => {
+            test("with undefined", () => {
+                const platform = new mocks.Platform();
+                platform.setConfiguration(undefined);
+                assert.deepStrictEqual(platform.getConfiguration(), undefined);
+            });
+
+            test("with null", () => {
+                const platform = new mocks.Platform();
+                platform.setConfiguration(null);
+                assert.deepStrictEqual(platform.getConfiguration(), null);
+            });
+
+            test("with empty configuration", () => {
+                const platform = new mocks.Platform();
+                platform.setConfiguration(new mocks.Configuration());
+                assert.deepStrictEqual(platform.getConfiguration(), new mocks.Configuration());
+            });
+
+            test("with configuration values but no callback", () => {
+                const platform = new mocks.Platform();
+                platform.setConfiguration(new mocks.Configuration({ "apples": 50 }));
+                assert.deepStrictEqual(platform.getConfiguration(), new mocks.Configuration({ "apples": 50 }));
+            });
+
+            test("with configuration values and callback", () => {
+                const platform = new mocks.Platform();
+
+                let configurationChanged: boolean = false;
+                platform.setConfigurationChangedCallback(() => {
+                    configurationChanged = true;
+                });
+
+                platform.setConfiguration(new mocks.Configuration({ "apples": 51 }));
+                
+                assert.deepStrictEqual(platform.getConfiguration(), new mocks.Configuration({ "apples": 51 }));
+                assert.deepStrictEqual(configurationChanged, true);
             });
         });
     });

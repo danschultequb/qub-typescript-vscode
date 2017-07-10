@@ -156,8 +156,6 @@ export class Platform implements interfaces.Platform {
     private _provideCompletions: (textDocument: interfaces.TextDocument, index: number) => qub.Iterable<interfaces.Completion>;
     private _provideFormattedDocument: (textDocument: interfaces.TextDocument) => string;
 
-    private _consoleLogs = new qub.SingleLinkList<string>();
-
     public dispose(): void {
     }
 
@@ -270,7 +268,7 @@ export class Platform implements interfaces.Platform {
 
         const activeTextEditor: interfaces.TextEditor = this.getActiveTextEditor();
         if (activeTextEditor && activeTextEditor.getDocument() === textDocument) {
-            this.setActiveTextEditor(null);
+            this.setActiveTextEditor(undefined);
         }
     }
 
@@ -278,7 +276,7 @@ export class Platform implements interfaces.Platform {
      * Insert the provided text at the provided startIndex in the active text editor.
      */
     public insertText(startIndex: number, text: string): void {
-        if (this._activeTextEditor) {
+        if (this._activeTextEditor && this._activeTextEditor.getDocument()) {
             this._activeTextEditor.insert(startIndex, text);
             if (this._textDocumentChanged) {
                 const change = new interfaces.TextDocumentChange(this._activeTextEditor, new qub.Span(startIndex, 0), text);
@@ -367,17 +365,6 @@ export class Platform implements interfaces.Platform {
 
     public getOperatingSystem(): string {
         return "MOCK_OPERATING_SYSTEM";
-    }
-
-    public consoleLog(message: string): void {
-        this._consoleLogs.add(message);
-    }
-
-    /**
-     * Get the logs that have been written to the console.
-     */
-    public getConsoleLogs(): qub.Iterable<string> {
-        return this._consoleLogs;
     }
 }
 
