@@ -694,6 +694,13 @@ suite("Mocks", () => {
             test("with undefined arguments", () => {
                 const platform = new mocks.Platform();
                 platform.setTextDocumentIssues(undefined, undefined, undefined);
+                assert.deepStrictEqual(platform.getTextDocumentIssues(undefined).toArray(), []);
+            });
+
+            test(`with a single issue`, () => {
+                const platform = new mocks.Platform();
+                platform.setTextDocumentIssues(undefined, new mocks.TextDocument("A", "B", "C"), new qub.ArrayList<qub.Issue>([qub.Error("D", new qub.Span(0, 1))]));
+                assert.deepStrictEqual(platform.getTextDocumentIssues("B").toArray(), [qub.Error("D", new qub.Span(0, 1))]);
             });
         });
 
@@ -731,7 +738,7 @@ suite("Mocks", () => {
                 });
 
                 platform.setConfiguration(new mocks.Configuration({ "apples": 51 }));
-                
+
                 assert.deepStrictEqual(platform.getConfiguration(), new mocks.Configuration({ "apples": 51 }));
                 assert.deepStrictEqual(configurationChanged, true);
             });
@@ -746,6 +753,27 @@ suite("Mocks", () => {
     });
 
     suite("PlaintextLanguageExtension", () => {
+        suite("constructor()", () => {
+            test("with no platform", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                assert.deepStrictEqual(extension.name, "Plaintext Tools");
+                assert.deepStrictEqual(extension.version, "1.0.0");
+            });
+
+            test("with a platform", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                assert.deepStrictEqual(extension.name, "Plaintext Tools");
+                assert.deepStrictEqual(extension.version, "1.0.0");
+
+                platform.setActiveTextEditor(new mocks.TextEditor(undefined));
+                platform.setActiveTextEditor(undefined);
+                platform.setConfiguration(new mocks.Configuration({}));
+                platform.openTextDocument(new mocks.TextDocument("X", "Y", "Z"));
+                platform.saveTextDocument(new mocks.TextDocument("L", "M", "N"));
+            });
+        });
+
         suite("isParsable()", () => {
             test("with undefined", () => {
                 const extension = new mocks.PlaintextLanguageExtension(undefined);
@@ -801,6 +829,388 @@ suite("Mocks", () => {
             test(`with "Shopping List:"`, () => {
                 const extension = new mocks.PlaintextLanguageExtension(undefined);
                 assert.deepStrictEqual(extension.parseDocument("Shopping List:"), new mocks.PlaintextDocument("Shopping List:"));
+            });
+        });
+
+        suite("dispose()", () => {
+            test("when not disposed", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                extension.dispose();
+            });
+
+            test("when disposed", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                extension.dispose();
+
+                extension.dispose();
+            });
+
+            test("with a platform", () => {
+                const extension = new mocks.PlaintextLanguageExtension(new mocks.Platform());
+                extension.dispose();
+            });
+        });
+
+        suite("getConfigurationValue()", () => {
+            test("with no platform set", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(undefined), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(null), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(""), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue("apples"), undefined);
+            });
+
+            test("with no configuration set", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                assert.deepStrictEqual(extension.getConfigurationValue(undefined), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(null), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(""), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue("apples"), undefined);
+            });
+
+            test("with empty configuration set", () => {
+                const platform = new mocks.Platform();
+                platform.setConfiguration(new mocks.Configuration({}));
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                assert.deepStrictEqual(extension.getConfigurationValue(undefined), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(null), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(""), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue("apples"), undefined);
+            });
+
+            test("with no extension configuration set", () => {
+                const platform = new mocks.Platform();
+                platform.setConfiguration(new mocks.Configuration({ "apples": 1 }));
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                assert.deepStrictEqual(extension.getConfigurationValue(undefined), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(null), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(""), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue("apples"), undefined);
+            });
+
+            test("with extension configuration set", () => {
+                const platform = new mocks.Platform();
+                platform.setConfiguration(new mocks.Configuration({ "Plaintext Tools": { "apples": 1 } }));
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                assert.deepStrictEqual(extension.getConfigurationValue(undefined), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(null), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue(""), undefined);
+                assert.deepStrictEqual(extension.getConfigurationValue("apples"), 1);
+            });
+        });
+
+        suite("setOnProvideIssues()", () => {
+            test("with undefined provider", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                extension.setOnProvideIssues(undefined);
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I have a red dog."));
+
+                assert.deepStrictEqual(platform.getTextDocumentIssues("mock://document.uri").toArray(), []);
+
+                extension.dispose();
+            });
+
+            test("with provider", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                extension.setOnProvideIssues((parsedDocument: mocks.PlaintextDocument) => {
+                    return new qub.SingleLinkList<qub.Issue>([qub.Error("No red allowed", new qub.Span(9, 3))]);
+                });;
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I have a red dog."));
+
+                assert.deepStrictEqual(platform.getTextDocumentIssues("mock://document.uri").toArray(), [qub.Error("No red allowed", new qub.Span(9, 3))]);
+            });
+        });
+
+        suite("setOnProvideHover()", () => {
+            test("with undefined provider", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                extension.setOnProvideHover(undefined);
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(platform.getHoverAt(9), undefined);
+            });
+
+            test("with provider", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                extension.setOnProvideHover((parsedDocument: mocks.PlaintextDocument, characterIndex: number) => {
+                    return new interfaces.Hover(["Blue"], new qub.Span(7, 4));
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I have a red dog."));
+
+                const hover: interfaces.Hover = platform.getHoverAt(9);
+                assert.deepStrictEqual(hover, new interfaces.Hover(["Blue"], new qub.Span(7, 4)));
+            });
+
+            test("with provider but non-plaintext document", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                extension.setOnProvideHover((parsedDocument: mocks.PlaintextDocument, characterIndex: number) => {
+                    return new interfaces.Hover(["Blue"], new qub.Span(7, 4));
+                });
+
+                // Must open a plaintext document first to register all of our language specific
+                // event handlers.
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I have a red dog."));
+
+                platform.openTextDocument(new mocks.TextDocument("xml", "mock://document2.uri", "I have a red dog."));
+
+                assert.deepStrictEqual(platform.getHoverAt(9), undefined);
+            });
+        });
+
+        suite("setOnParsedDocumentOpened()", () => {
+            test("with undefined provider", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                extension.setOnParsedDocumentOpened(undefined);
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+            });
+
+            test("with provider but non-plaintext document", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentOpened((parsedDocument: mocks.PlaintextDocument) => {
+                    documentText = parsedDocument.getText();
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("xml", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(documentText, undefined);
+            });
+
+            test("with provider and plaintext document", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentOpened((parsedDocument: mocks.PlaintextDocument) => {
+                    documentText = parsedDocument.getText();
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(documentText, "I like blue cheese.");
+            });
+        });
+
+        suite("setOnParsedDocumentSaved()", () => {
+            test("with undefined provider before plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                extension.setOnParsedDocumentSaved(undefined);
+
+                platform.saveTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+            });
+
+            test("with undefined provider after plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                extension.setOnParsedDocumentSaved(undefined);
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+                platform.saveTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+            });
+
+            test("with provider but non-plaintext document", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentSaved((parsedDocument: mocks.PlaintextDocument) => {
+                    documentText = parsedDocument.getText();
+                });
+
+                platform.saveTextDocument(new mocks.TextDocument("xml", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(documentText, undefined);
+            });
+
+            test("with provider and plaintext document before plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentSaved((parsedDocument: mocks.PlaintextDocument) => {
+                    documentText = parsedDocument.getText();
+                });
+
+                platform.saveTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(documentText, "I like blue cheese.");
+            });
+
+            test("with provider and plaintext document after plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentSaved((parsedDocument: mocks.PlaintextDocument) => {
+                    documentText = parsedDocument.getText();
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+                platform.saveTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(documentText, "I like blue cheese.");
+            });
+        });
+
+        suite("setOnParsedDocumentClosed()", () => {
+            test("with undefined callback before plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                extension.setOnParsedDocumentClosed(undefined);
+
+                platform.closeTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+            });
+
+            test("with undefined callback after plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                extension.setOnParsedDocumentClosed(undefined);
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+
+                platform.closeTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+            });
+
+            test("with callback but non-plaintext document before plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentClosed((parsedDocument: mocks.PlaintextDocument) => {
+                    documentText = parsedDocument.getText();
+                });
+
+                platform.closeTextDocument(new mocks.TextDocument("xml", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(documentText, undefined);
+            });
+
+            test("with callback but non-plaintext document before plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentClosed((parsedDocument: mocks.PlaintextDocument) => {
+                    documentText = parsedDocument.getText();
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+
+                platform.closeTextDocument(new mocks.TextDocument("xml", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(documentText, undefined);
+            });
+
+            test("with callback and plaintext document before plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentClosed((parsedDocument: mocks.PlaintextDocument) => {
+                    documentText = parsedDocument.getText();
+                });
+
+                platform.closeTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(documentText, undefined);
+            });
+
+            test("with callback and plaintext document after plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentClosed((parsedDocument: mocks.PlaintextDocument) => {
+                    documentText = parsedDocument.getText();
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+                platform.closeTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+
+                assert.deepStrictEqual(documentText, "I like blue cheese.");
+            });
+        });
+
+        suite("setOnParsedDocumentChanged()", () => {
+            test("with undefined callback after plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                extension.setOnParsedDocumentChanged(undefined);
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+                platform.insertText(2, "don't ");
+
+                assert.deepStrictEqual(platform.getActiveTextEditor().getDocument(), new mocks.TextDocument("txt", "mock://document.uri", "I don't like blue cheese."));
+            });
+
+            test("with provider but non-plaintext document before plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentChanged((change: interfaces.TextDocumentChange) => {
+                    documentText = change.textDocument.getText();
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("xml", "mock://document.uri", "I like blue cheese."));
+                platform.insertText(2, "don't ");
+
+                assert.deepStrictEqual(platform.getActiveTextEditor().getDocument(), new mocks.TextDocument("xml", "mock://document.uri", "I don't like blue cheese."));
+                assert.deepStrictEqual(documentText, undefined);
+            });
+
+            test("with provider but non-plaintext document after plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentChanged((change: interfaces.TextDocumentChange) => {
+                    documentText = change.textDocument.getText();
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+                platform.openTextDocument(new mocks.TextDocument("xml", "mock://document.xml", "I like blue cheese too."));
+                platform.insertText(2, "don't ");
+
+                assert.deepStrictEqual(platform.getActiveTextEditor().getDocument(), new mocks.TextDocument("xml", "mock://document.xml", "I don't like blue cheese too."));
+                assert.deepStrictEqual(documentText, undefined);
+            });
+
+            test("with provider and plaintext document after plaintext document opened", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                let documentText: string;
+                extension.setOnParsedDocumentChanged((change: interfaces.TextDocumentChange) => {
+                    documentText = change.textDocument.getText();
+                });
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "mock://document.uri", "I like blue cheese."));
+                platform.insertText(2, "don't ");
+
+                assert.deepStrictEqual(platform.getActiveTextEditor().getDocument(), new mocks.TextDocument("txt", "mock://document.uri", "I don't like blue cheese."));
+                assert.deepStrictEqual(documentText, "I don't like blue cheese.");
             });
         });
     });

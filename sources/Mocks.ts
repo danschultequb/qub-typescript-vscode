@@ -145,6 +145,7 @@ export class Platform implements interfaces.Platform {
     private _activeTextEditor: interfaces.TextEditor;
     private _configuration: interfaces.Configuration;
     private _installedExtensions = new qub.Map<string, qub.List<string>>();
+    private _textDocumentIssues = new qub.Map<string, qub.Iterable<qub.Issue>>();
 
     private _configurationChanged: (newConfiguration: interfaces.Configuration) => void;
     private _activeEditorChanged: (editor: interfaces.TextEditor) => void;
@@ -331,6 +332,15 @@ export class Platform implements interfaces.Platform {
     }
 
     public setTextDocumentIssues(extensionName: string, textDocument: interfaces.TextDocument, issues: qub.Iterable<qub.Issue>): void {
+        this._textDocumentIssues.add(textDocument ? textDocument.getURI() : undefined, issues);
+    }
+
+    public getTextDocumentIssues(textDocumentUri: string): qub.Iterable<qub.Issue> {
+        let result: qub.Iterable<qub.Issue> = this._textDocumentIssues.get(textDocumentUri);
+        if (!result) {
+            result = new qub.SingleLinkList<qub.Issue>();
+        }
+        return result;
     }
 
     public getConfiguration(): interfaces.Configuration {

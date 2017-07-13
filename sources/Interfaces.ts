@@ -306,10 +306,10 @@ export interface Platform extends Disposable {
  */
 export abstract class LanguageExtension<ParsedDocumentType> implements Disposable {
     private _disposed: boolean;
-    private _basicSubscriptions: Disposable[] = [];
-    private _languageSubscriptions: Disposable[] = [];
+    private _basicSubscriptions = new qub.SingleLinkList<Disposable>();
+    private _languageSubscriptions = new qub.SingleLinkList<Disposable>();
 
-    private _parsedDocuments: { [documentUrl: string]: ParsedDocumentType } = {};
+    private _parsedDocuments = new qub.Map<string, ParsedDocumentType>();
 
     private _onProvideIssues: (textDocument: ParsedDocumentType) => qub.Iterable<qub.Issue>;
     private _onProvideHoverFunction: (textDocument: ParsedDocumentType, index: number) => Hover;
@@ -324,28 +324,24 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
 
     constructor(private _extensionName: string, private _extensionVersion: string, private _language: string, private _platform: Platform) {
         if (this._platform) {
-            this._basicSubscriptions.push(this._platform.setActiveEditorChangedCallback((activeEditor: TextEditor) => {
+            this._basicSubscriptions.add(this._platform.setActiveEditorChangedCallback((activeEditor: TextEditor) => {
                 if (activeEditor) {
                     this.updateDocumentParse(activeEditor.getDocument());
                 }
             }));
 
-            this._basicSubscriptions.push(this._platform.setConfigurationChangedCallback(() => {
+            this._basicSubscriptions.add(this._platform.setConfigurationChangedCallback(() => {
                 this.updateActiveEditorParse();
             }));
 
-            this._basicSubscriptions.push(this._platform.setTextDocumentOpenedCallback((openedTextDocument: TextDocument) => {
+            this._basicSubscriptions.add(this._platform.setTextDocumentOpenedCallback((openedTextDocument: TextDocument) => {
                 this.onDocumentOpened(openedTextDocument);
             }));
 
-            this._basicSubscriptions.push(this._platform.setTextDocumentSavedCallback((savedTextDocument: TextDocument) => {
+            this._basicSubscriptions.add(this._platform.setTextDocumentSavedCallback((savedTextDocument: TextDocument) => {
                 this.onDocumentSaved(savedTextDocument);
             }));
         }
-    }
-
-    protected activate(): void {
-        this.updateActiveEditorParse();
     }
 
     public dispose(): void {
@@ -355,19 +351,17 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
             for (const languageSubscription of this._languageSubscriptions) {
                 languageSubscription.dispose();
             }
-            this._languageSubscriptions.length = 0;
+            this._languageSubscriptions.clear();
 
             for (const basicEventSubscription of this._basicSubscriptions) {
                 basicEventSubscription.dispose();
             }
-            this._basicSubscriptions.length = 0;
+            this._basicSubscriptions.clear();
 
-            this._platform.dispose();
+            if (this._platform) {
+                this._platform.dispose();
+            }
         }
-    }
-
-    protected get platform(): Platform {
-        return this._platform;
     }
 
     public get name(): string {
@@ -459,7 +453,7 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
      * Get the configuration that is associated with this extension.
      */
     protected getConfiguration(): Configuration {
-        return this._platform.getConfiguration();
+        return this._platform ? this._platform.getConfiguration() : undefined;
     }
 
     /**
@@ -493,39 +487,40 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
 
     private updateDocumentParse(textDocument: TextDocument): void {
         if (textDocument && this.isParsable(textDocument)) {
-            if (Object.keys(this._parsedDocuments).length === 0) {
-                this._languageSubscriptions.push(this._platform.setTextDocumentChangedCallback((change: TextDocumentChange) => {
+            if (!this._parsedDocuments.any()) {
+                this._languageSubscriptions.add(this._platform.setTextDocumentChangedCallback((change: TextDocumentChange) => {
                     this.onTextDocumentChanged(change);
                 }));
 
-                this._languageSubscriptions.push(this._platform.setTextDocumentClosedCallback((closedTextDocument: TextDocument) => {
+                this._languageSubscriptions.add(this._platform.setTextDocumentClosedCallback((closedTextDocument: TextDocument) => {
                     this.onDocumentClosed(closedTextDocument);
                 }));
 
                 if (this._onProvideHoverFunction) {
-                    this._languageSubscriptions.push(this._platform.setProvideHoverCallback(this._language, (textDocument: TextDocument, index: number) => {
+                    this._languageSubscriptions.add(this._platform.setProvideHoverCallback(this._language, (textDocument: TextDocument, index: number) => {
                         return this.onProvideHover(textDocument, index);
                     }));
                 }
 
                 if (this._onProvideCompletionsFunction) {
-                    this._languageSubscriptions.push(this._platform.setProvideCompletionsCallback(this._language, this._onProvideCompletionsTriggerCharacters, (textDocument: TextDocument, index: number) => {
+                    this._languageSubscriptions.add(this._platform.setProvideCompletionsCallback(this._language, this._onProvideCompletionsTriggerCharacters, (textDocument: TextDocument, index: number) => {
                         return this.onProvideCompletions(textDocument, index);
                     }));
                 }
 
                 if (this._onProvideFormattedDocumentFunction) {
-                    this._languageSubscriptions.push(this._platform.setProvideFormattedDocumentTextCallback(this._language, (textDocument: TextDocument) => {
+                    this._languageSubscriptions.add(this._platform.setProvideFormattedDocumentTextCallback(this._language, (textDocument: TextDocument) => {
                         return this.onProvideFormattedText(textDocument);
                     }));
                 }
             }
 
             const parsedDocument: ParsedDocumentType = this.parseDocument(textDocument.getText());
-            this._parsedDocuments[textDocument.getURI()] = parsedDocument;
+            this._parsedDocuments.add(textDocument.getURI(), parsedDocument);
 
             if (this._onProvideIssues) {
-                this._platform.setTextDocumentIssues(this._extensionName, textDocument, this._onProvideIssues(parsedDocument));
+                const documentIssues: qub.Iterable<qub.Issue> = this._onProvideIssues(parsedDocument);
+                this._platform.setTextDocumentIssues(this._extensionName, textDocument, documentIssues);
             }
         }
     }
@@ -546,7 +541,7 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
 
         if (textDocument && this.isParsable(textDocument)) {
             const documentUri: string = textDocument.getURI();
-            parsedDocument = this._parsedDocuments[documentUri];
+            parsedDocument = this._parsedDocuments.get(documentUri);
         }
 
         return parsedDocument;
@@ -593,20 +588,20 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
             }
         }
 
-        const parsedDocumentsBeforeDelete: number = Object.keys(this._parsedDocuments).length;
+        const hasParsedDocumentsBeforeRemove: boolean = this._parsedDocuments.any();
 
-        delete this._parsedDocuments[textDocument.getURI()];
+        this._parsedDocuments.remove(textDocument.getURI());
         if (this._onProvideIssues) {
-            this._platform.setTextDocumentIssues(this._extensionName, textDocument, new qub.ArrayList<qub.Issue>());
+            this._platform.setTextDocumentIssues(this._extensionName, textDocument, new qub.SingleLinkList<qub.Issue>());
         }
 
-        const parsedDocumentsAfterDelete: number = Object.keys(this._parsedDocuments).length;
+        const hasParsedDocumentsAfterRemove: boolean = this._parsedDocuments.any();
 
-        if (parsedDocumentsBeforeDelete > 0 && parsedDocumentsAfterDelete === 0) {
+        if (hasParsedDocumentsBeforeRemove && !hasParsedDocumentsAfterRemove) {
             for (const languageSubscription of this._languageSubscriptions) {
                 languageSubscription.dispose();
             }
-            this._languageSubscriptions.length = 0;
+            this._languageSubscriptions.clear();
         }
     }
 
