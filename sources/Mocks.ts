@@ -113,7 +113,7 @@ export class TextEditor implements interfaces.TextEditor {
         this._cursorIndex = cursorIndex;
     }
 
-    public insert(startIndex: number, text: string): Thenable<boolean> {
+    public insert(startIndex: number, text: string): interfaces.Thenable<boolean> {
         const documentText: string = this._document.getText();
         const beforeInsert: string = startIndex < 0 ? "" : documentText.substr(0, startIndex);
         const afterInsert: string = startIndex < documentText.length ? documentText.substr(startIndex) : "";

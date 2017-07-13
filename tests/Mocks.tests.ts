@@ -1213,5 +1213,27 @@ suite("Mocks", () => {
                 assert.deepStrictEqual(documentText, "I don't like blue cheese.");
             });
         });
+
+        suite("isExtensionInstalled()", () => {
+            test("with undefined publisher name and extension name", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                assert.deepStrictEqual(extension.isExtensionInstalled(undefined, undefined), false);
+            });
+
+            test(`with "A" publisher name and "B" extension name when not installed`, () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                assert.deepStrictEqual(extension.isExtensionInstalled("A", "B"), false);
+            });
+
+            test(`with "A" publisher name and "B" extension name when installed`, () => {
+                const platform = new mocks.Platform();
+                platform.addInstalledExtension("A", "B");
+
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                assert.deepStrictEqual(extension.isExtensionInstalled("A", "B"), true);
+            });
+        });
     });
 });
