@@ -331,7 +331,10 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
             }));
 
             this._basicSubscriptions.add(this._platform.setConfigurationChangedCallback(() => {
-                this.updateActiveEditorParse();
+                const activeEditor: TextEditor = this._platform.getActiveTextEditor();
+                if (activeEditor) {
+                    this.updateDocumentParse(activeEditor.getDocument());
+                }
             }));
 
             this._basicSubscriptions.add(this._platform.setTextDocumentOpenedCallback((openedTextDocument: TextDocument) => {
@@ -476,13 +479,6 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
      */
     public setOnProvideFormattedDocument(onProvideFormattedDocument: (parsedDocument: ParsedDocumentType) => string): void {
         this._onProvideFormattedDocumentFunction = onProvideFormattedDocument;
-    }
-
-    protected updateActiveEditorParse(): void {
-        const activeEditor: TextEditor = this._platform.getActiveTextEditor();
-        if (activeEditor) {
-            this.updateDocumentParse(activeEditor.getDocument());
-        }
     }
 
     private updateDocumentParse(textDocument: TextDocument): void {
