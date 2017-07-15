@@ -1,3 +1,7 @@
+### 1.0.6 (2017-07-15)
+
+- Flatten package for easier importing
+
 ### 1.0.5 (2017-07-15)
 
 - Rename source files to be lowercased
