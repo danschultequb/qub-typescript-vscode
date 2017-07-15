@@ -1,9 +1,7 @@
 {
   "name": "qub-vscode",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A collection of common data structures and functions that make creating Visual Studio Code extensions easier.",
-  "main": "output/sources/Main",
-  "typings": "output/sources/Main",
   "files": [
     "output/sources/"
   ],

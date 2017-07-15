@@ -1,8 +1,8 @@
 import * as assert from "assert";
 import * as qub from "qub";
 
-import * as interfaces from "../sources/Interfaces";
-import * as mocks from "../sources/Mocks";
+import * as interfaces from "../sources/interfaces";
+import * as mocks from "../sources/mocks";
 
 suite("Interfaces", () => {
     suite("Completion", () => {

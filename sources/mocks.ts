@@ -1,6 +1,6 @@
 import * as qub from "qub";
 
-import * as interfaces from "./Interfaces";
+import * as interfaces from "./interfaces";
 
 export class Disposable implements interfaces.Disposable {
     public dispose(): void {

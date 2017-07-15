@@ -1,8 +1,8 @@
 import * as assert from "assert";
 import * as qub from "qub";
 
-import * as interfaces from "../sources/Interfaces";
-import * as mocks from "../sources/Mocks";
+import * as interfaces from "../sources/interfaces";
+import * as mocks from "../sources/mocks";
 
 suite("Mocks", () => {
     suite("Disposable", () => {
@@ -674,7 +674,7 @@ suite("Mocks", () => {
 
                 const changeEditor = new mocks.TextEditor(new mocks.TextDocument("A", "B", "testC"));
                 changeEditor.setCursorIndex(4);
-                assert.deepStrictEqual(change, new interfaces.TextDocumentChange(changeEditor, new qub.Span(0, 0), "test"));
+                assert.deepEqual(change, new interfaces.TextDocumentChange(changeEditor, new qub.Span(0, 0), "test"));
             });
         });
 

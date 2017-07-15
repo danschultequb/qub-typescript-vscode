@@ -1,3 +1,8 @@
+### 1.0.5 (2017-07-15)
+
+- Rename source files to be lowercased
+- Remove Main
+
 ### 1.0.4 (2017-07-15)
 
 - Remove postinstall npm script and add setup npm script to package.json
