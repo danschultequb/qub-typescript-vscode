@@ -1408,5 +1408,36 @@ suite("Mocks", () => {
 
             platform.setConfiguration(new mocks.Configuration());
         });
+
+        suite("getActiveTextEditor()", () => {
+            test("with no platform", () => {
+                const extension = new mocks.PlaintextLanguageExtension(undefined);
+                assert.deepStrictEqual(extension.getActiveTextEditor(), undefined);
+            });
+
+            test("with no active text editor", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+                assert.deepStrictEqual(extension.getActiveTextEditor(), undefined);
+            });
+
+            test("with non-plaintext active text editor", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                platform.openTextDocument(new mocks.TextDocument("A", "B", "C"));
+
+                assert.deepStrictEqual(extension.getActiveTextEditor(), new mocks.TextEditor(new mocks.TextDocument("A", "B", "C")));
+            });
+
+            test("with plaintext active text editor", () => {
+                const platform = new mocks.Platform();
+                const extension = new mocks.PlaintextLanguageExtension(platform);
+
+                platform.openTextDocument(new mocks.TextDocument("txt", "B", "C"));
+
+                assert.deepStrictEqual(extension.getActiveTextEditor(), new mocks.TextEditor(new mocks.TextDocument("txt", "B", "C")));
+            });
+        });
     });
 });
