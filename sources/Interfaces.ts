@@ -185,6 +185,22 @@ export class TextDocumentChange {
     }
 }
 
+/**
+ * A change that occurred to a recognized parsed document.
+ */
+export class ParsedDocumentChange<ParsedDocumentType> extends TextDocumentChange {
+    constructor(private _parsedDocument: ParsedDocumentType, textEditor: TextEditor, span: qub.Span, text: string) {
+        super(textEditor, span, text);
+    }
+
+    /**
+     * The recognized parsed document that this change occurred to.
+     */
+    public get parsedDocument(): ParsedDocumentType {
+        return this._parsedDocument;
+    }
+}
+
 
 /**
  * A generic interface for the VS Code application platform.
@@ -205,7 +221,7 @@ export interface Platform extends Disposable {
      * Set the cursor index of the active text editor. If no text editor is active, then this
      * function will do nothing.
      */
-    setCursorIndex(cursorIndex: number): void;
+    setCursorIndex(cursorCharacterIndex: number): void;
 
     /**
      * Set the function to call when the active text editor in VSCode is changed.
@@ -241,13 +257,13 @@ export interface Platform extends Disposable {
      * Set the function to call when the cursor hovers over a text document with the provided
      * language identifier.
      */
-    setProvideHoverCallback(languageId: string, callback: (textDocument: TextDocument, index: number) => Hover): Disposable;
+    setProvideHoverCallback(languageId: string, callback: (textDocument: TextDocument, characterIndex: number) => Hover): Disposable;
 
     /**
      * Set the function to call when one of the completion trigger characters is pressed on a text
      * document with provided language identifier.
      */
-    setProvideCompletionsCallback(languageId: string, completionTriggerCharacters: string[], callback: (textDocument: TextDocument, index: number) => qub.Iterable<Completion>): Disposable;
+    setProvideCompletionsCallback(languageId: string, completionTriggerCharacters: string[], callback: (textDocument: TextDocument, characterIndex: number) => qub.Iterable<Completion>): Disposable;
 
     setProvideFormattedDocumentTextCallback(languageId: string, callback: (textDocument: TextDocument) => string): Disposable;
 
@@ -282,9 +298,339 @@ export interface Platform extends Disposable {
      * Get a string identifier for the operating system that VS Code is running on.
      */
     getOperatingSystem(): string;
+}
+
+/**
+ * A generic LanguageExtension class that wraps the VS Code functions and classes into an easier
+ * interface. All VS Code extensions that parse and edit a textDocument should implement this class.
+ */
+export abstract class LanguageExtension<ParsedDocumentType> implements Disposable {
+    private _disposed: boolean;
+    private _basicSubscriptions = new qub.SingleLinkList<Disposable>();
+    private _languageSubscriptions = new qub.SingleLinkList<Disposable>();
+
+    private _parsedDocuments = new qub.Map<string, ParsedDocumentType>();
+
+    private _onProvideIssues: (textDocument: ParsedDocumentType) => qub.Iterable<qub.Issue>;
+    private _onProvideHoverFunction: (textDocument: ParsedDocumentType, index: number) => Hover;
+    private _onProvideCompletionsTriggerCharacters: string[];
+    private _onProvideCompletionsFunction: (textDocument: ParsedDocumentType, index: number) => qub.Iterable<Completion>;
+    private _onProvideFormattedDocumentFunction: (textDocument: ParsedDocumentType) => string;
+
+    private _onParsedDocumentOpened: (parsedDocument: ParsedDocumentType) => void;
+    private _onParsedDocumentChanged: (parsedDocumentChange: ParsedDocumentChange<ParsedDocumentType>) => void;
+    private _onParsedDocumentSaved: (parsedDocument: ParsedDocumentType) => void;
+    private _onParsedDocumentClosed: (parsedDocument: ParsedDocumentType) => void;
+
+    constructor(private _extensionName: string, private _extensionVersion: string, private _language: string, private _platform: Platform) {
+        if (this._platform) {
+            this._basicSubscriptions.add(this._platform.setActiveEditorChangedCallback((activeEditor: TextEditor) => {
+                if (activeEditor) {
+                    this.updateDocumentParse(activeEditor.getDocument());
+                }
+            }));
+
+            this._basicSubscriptions.add(this._platform.setConfigurationChangedCallback(() => {
+                const activeEditor: TextEditor = this._platform.getActiveTextEditor();
+                if (activeEditor) {
+                    this.updateDocumentParse(activeEditor.getDocument());
+                }
+            }));
+
+            this._basicSubscriptions.add(this._platform.setTextDocumentOpenedCallback((openedTextDocument: TextDocument) => {
+                this.onDocumentOpened(openedTextDocument);
+            }));
+
+            this._basicSubscriptions.add(this._platform.setTextDocumentSavedCallback((savedTextDocument: TextDocument) => {
+                this.onDocumentSaved(savedTextDocument);
+            }));
+        }
+    }
+
+    public dispose(): void {
+        if (!this._disposed) {
+            this._disposed = true;
+
+            for (const languageSubscription of this._languageSubscriptions) {
+                languageSubscription.dispose();
+            }
+            this._languageSubscriptions.clear();
+
+            for (const basicEventSubscription of this._basicSubscriptions) {
+                basicEventSubscription.dispose();
+            }
+            this._basicSubscriptions.clear();
+
+            if (this._platform) {
+                this._platform.dispose();
+            }
+        }
+    }
+
+    public get name(): string {
+        return this._extensionName;
+    }
+
+    public get version(): string {
+        return this._extensionVersion;
+    }
+
+    public getConfigurationValue<T>(propertyPath: string, defaultValue?: T): T {
+        const configuration: Configuration = this.getConfiguration();
+        return configuration ? configuration.get<T>(`${this._extensionName}.${propertyPath}`, defaultValue) : defaultValue;
+    }
 
     /**
-     * Write the provided message to the console.
+     * Set the function that will be called when VS Code requests for the issues associated with the
+     * provided textDocument.
+     * NOTE: The provided function must be a function, and not a method that is dependant on a
+     * caller object. If you want to call a method, call this setter with a lamda function that
+     * wraps the method invocation.
      */
-    consoleLog(message: string): void;
+    public setOnProvideIssues(onProvideIssues: (parsedDocument: ParsedDocumentType) => qub.Iterable<qub.Issue>): void {
+        this._onProvideIssues = onProvideIssues;
+    }
+
+    /**
+     * Set the function that will be called when VS Code requests for hover information.
+     * NOTE: The provided function must be a function, and not a method that is dependant on a
+     * caller object. If you want to call a method, call this setter with a lamda function that
+     * wraps the method invocation.
+     */
+    public setOnProvideHover(onProvideHover: (parsedDocument: ParsedDocumentType, index: number) => Hover): void {
+        this._onProvideHoverFunction = onProvideHover;
+    }
+
+    /**
+     * Set the function that will be called when a document that this language extension can parse
+     * is opened.
+     * NOTE: The provided function must be a function, and not a method that is dependant on a
+     * caller object. If you want to call a method, call this setter with a lamda function that
+     * wraps the method invocation.
+     */
+    public setOnParsedDocumentOpened(onParsedDocumentOpened: (parsedDocument: ParsedDocumentType) => void): void {
+        this._onParsedDocumentOpened = onParsedDocumentOpened;
+    }
+
+    /**
+     * Set the function that will be called when a document that this language extension can parse
+     * is saved.
+     * NOTE: The provided function must be a function, and not a method that is dependant on a
+     * caller object. If you want to call a method, call this setter with a lamda function that
+     * wraps the method invocation.
+     */
+    public setOnParsedDocumentSaved(onParsedDocumentSaved: (parsedDocument: ParsedDocumentType) => void): void {
+        this._onParsedDocumentSaved = onParsedDocumentSaved;
+    }
+
+    /**
+     * Set the function that will be called when a document that this language extension can parse
+     * is changed.
+     * NOTE: The provided function must be a function, and not a method that is dependant on a
+     * caller object. If you want to call a method, call this setter with a lamda function that
+     * wraps the method invocation.
+     */
+    public setOnParsedDocumentChanged(onParsedDocumentChanged: (parsedDocumentChange: ParsedDocumentChange<ParsedDocumentType>) => void): void {
+        this._onParsedDocumentChanged = onParsedDocumentChanged;
+    }
+
+    /**
+     * Set the function that will be called when a document that this language extension can parse
+     * is closed.
+     * NOTE: The provided function must be a function, and not a method that is dependant on a
+     * caller object. If you want to call a method, call this setter with a lamda function that
+     * wraps the method invocation.
+     */
+    public setOnParsedDocumentClosed(onParsedDocumentClosed: (parsedDocument: ParsedDocumentType) => void): void {
+        this._onParsedDocumentClosed = onParsedDocumentClosed;
+    }
+
+    /**
+     * Get whether an extension with the provided name is installed.
+     */
+    public isExtensionInstalled(publisher: string, extensionName: string): boolean {
+        return this._platform.isExtensionInstalled(publisher, extensionName);
+    }
+
+    /**
+     * Get the configuration that is associated with this extension.
+     */
+    protected getConfiguration(): Configuration {
+        return this._platform ? this._platform.getConfiguration() : undefined;
+    }
+
+    /**
+     * Set the function that will be called when VS Code requests for auto-completion information.
+     * NOTE: The provided function must be a function, and not a method that is dependant on a
+     * caller object. If you want to call a method, call this setter with a lamda function that
+     * wraps the method invocation.
+     */
+    public setOnProvideCompletions(triggerCharacters: string[], onProvideCompletions: (parsedDocument: ParsedDocumentType, index: number) => qub.Iterable<Completion>): void {
+        this._onProvideCompletionsTriggerCharacters = triggerCharacters;
+        this._onProvideCompletionsFunction = onProvideCompletions;
+    }
+
+    /**
+     * Set the function that will be called when VS Code requests for the current textDocument to be
+     * formatted.
+     * NOTE: The provided function must be a function, and not a method that is dependant on a
+     * caller object. If you want to call a method, call this setter with a lamda function that
+     * wraps the method invocation.
+     */
+    public setOnProvideFormattedDocument(onProvideFormattedDocument: (parsedDocument: ParsedDocumentType) => string): void {
+        this._onProvideFormattedDocumentFunction = onProvideFormattedDocument;
+    }
+
+    private updateDocumentParse(textDocument: TextDocument): void {
+        if (textDocument && this.isParsable(textDocument)) {
+            if (!this._parsedDocuments.any()) {
+                this._languageSubscriptions.add(this._platform.setTextDocumentChangedCallback((change: TextDocumentChange) => {
+                    this.onTextDocumentChanged(change);
+                }));
+
+                this._languageSubscriptions.add(this._platform.setTextDocumentClosedCallback((closedTextDocument: TextDocument) => {
+                    this.onDocumentClosed(closedTextDocument);
+                }));
+
+                if (this._onProvideHoverFunction) {
+                    this._languageSubscriptions.add(this._platform.setProvideHoverCallback(this._language, (textDocument: TextDocument, index: number) => {
+                        return this.onProvideHover(textDocument, index);
+                    }));
+                }
+
+                if (this._onProvideCompletionsFunction) {
+                    this._languageSubscriptions.add(this._platform.setProvideCompletionsCallback(this._language, this._onProvideCompletionsTriggerCharacters, (textDocument: TextDocument, index: number) => {
+                        return this.onProvideCompletions(textDocument, index);
+                    }));
+                }
+
+                if (this._onProvideFormattedDocumentFunction) {
+                    this._languageSubscriptions.add(this._platform.setProvideFormattedDocumentTextCallback(this._language, (textDocument: TextDocument) => {
+                        return this.onProvideFormattedText(textDocument);
+                    }));
+                }
+            }
+
+            const parsedDocument: ParsedDocumentType = this.parseDocument(textDocument.getText());
+            this._parsedDocuments.add(textDocument.getURI(), parsedDocument);
+
+            if (this._onProvideIssues) {
+                const documentIssues: qub.Iterable<qub.Issue> = this._onProvideIssues(parsedDocument);
+                this._platform.setTextDocumentIssues(this._extensionName, textDocument, documentIssues);
+            }
+        }
+    }
+
+    /**
+     * Determine if the provided textDocument is parsable by this language extension.
+     */
+    protected abstract isParsable(textDocument: TextDocument): boolean;
+
+    /**
+     * Parse the provided textDocument and return the language specific representation of the textDocument'savedDocument
+     * parse results.
+     */
+    protected abstract parseDocument(documentText: string): ParsedDocumentType;
+
+    private getParsedDocument(textDocument: TextDocument): ParsedDocumentType {
+        let parsedDocument: ParsedDocumentType;
+
+        if (textDocument && this.isParsable(textDocument)) {
+            const documentUri: string = textDocument.getURI();
+            parsedDocument = this._parsedDocuments.get(documentUri);
+        }
+
+        return parsedDocument;
+    }
+
+    private onTextDocumentChanged(change: TextDocumentChange): void {
+        this.updateDocumentParse(change.textDocument);
+        if (this._onParsedDocumentChanged) {
+            const parsedDocument: ParsedDocumentType = this.getParsedDocument(change.textDocument);
+            if (parsedDocument) {
+                const parsedDocumentChange = new ParsedDocumentChange(parsedDocument, change.editor, change.span, change.text);
+                this._onParsedDocumentChanged(parsedDocumentChange);
+            }
+        }
+    }
+
+    private onDocumentOpened(textDocument: TextDocument): void {
+        this.updateDocumentParse(textDocument);
+
+        if (this._onParsedDocumentOpened) {
+            const parsedDocument: ParsedDocumentType = this.getParsedDocument(textDocument);
+            if (parsedDocument) {
+                this._onParsedDocumentOpened(parsedDocument);
+            }
+        }
+    }
+
+    private onDocumentSaved(textDocument: TextDocument): void {
+        this.updateDocumentParse(textDocument);
+
+        if (this._onParsedDocumentSaved) {
+            const parsedDocument: ParsedDocumentType = this.getParsedDocument(textDocument);
+            if (parsedDocument) {
+                this._onParsedDocumentSaved(parsedDocument);
+            }
+        }
+    }
+
+    private onDocumentClosed(textDocument: TextDocument): void {
+        if (this._onParsedDocumentClosed) {
+            const parsedDocument: ParsedDocumentType = this.getParsedDocument(textDocument);
+            if (parsedDocument) {
+                this._onParsedDocumentClosed(parsedDocument);
+            }
+        }
+
+        const hasParsedDocumentsBeforeRemove: boolean = this._parsedDocuments.any();
+
+        this._parsedDocuments.remove(textDocument.getURI());
+        if (this._onProvideIssues) {
+            this._platform.setTextDocumentIssues(this._extensionName, textDocument, new qub.SingleLinkList<qub.Issue>());
+        }
+
+        const hasParsedDocumentsAfterRemove: boolean = this._parsedDocuments.any();
+
+        if (hasParsedDocumentsBeforeRemove && !hasParsedDocumentsAfterRemove) {
+            for (const languageSubscription of this._languageSubscriptions) {
+                languageSubscription.dispose();
+            }
+            this._languageSubscriptions.clear();
+        }
+    }
+
+    private onProvideHover(textDocument: TextDocument, index: number): Hover {
+        let result: Hover;
+
+        const parsedDocument: ParsedDocumentType = this.getParsedDocument(textDocument);
+        if (parsedDocument) {
+            result = this._onProvideHoverFunction(parsedDocument, index);
+        }
+
+        return result;
+    }
+
+    private onProvideCompletions(textDocument: TextDocument, index: number): qub.Iterable<Completion> {
+        let result: qub.Iterable<Completion>;
+
+        const parsedDocument: ParsedDocumentType = this.getParsedDocument(textDocument);
+        if (parsedDocument) {
+            result = this._onProvideCompletionsFunction(parsedDocument, index);
+        }
+
+        return result;
+    }
+
+    private onProvideFormattedText(textDocument: TextDocument): string {
+        let formattedText: string;
+
+        const parsedDocument: ParsedDocumentType = this.getParsedDocument(textDocument);
+        if (parsedDocument) {
+            formattedText = this._onProvideFormattedDocumentFunction(parsedDocument);
+        }
+
+        return formattedText;
+    }
 }
