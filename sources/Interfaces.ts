@@ -455,8 +455,15 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
     /**
      * Get the configuration that is associated with this extension.
      */
-    protected getConfiguration(): Configuration {
+    public getConfiguration(): Configuration {
         return this._platform ? this._platform.getConfiguration() : undefined;
+    }
+
+    /**
+     * Get the text editor that is currently active.
+     */
+    public getActiveTextEditor(): TextEditor {
+        return this._platform ? this._platform.getActiveTextEditor() : undefined;
     }
 
     /**
