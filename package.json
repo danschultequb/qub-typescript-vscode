@@ -3,11 +3,14 @@
   "version": "1.0.5",
   "description": "A collection of common data structures and functions that make creating Visual Studio Code extensions easier.",
   "files": [
-    "output/sources/"
+    "*.js",
+    "*.js.map",
+    "*.d.ts"
   ],
   "scripts": {
     "build": "tsc -p .",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build && cpy output/sources/* .",
+    "postpublish": "rimraf *.js && rimraf *.js.map && rimraf *.d.ts",
     "test": "mocha --colors --require source-map-support/register --ui tdd output/tests/",
     "coverage": "nyc npm test && open-cli output/coverage/index.html",
     "travis-test": "npm run setup && npm run build && nyc --reporter=text-lcov npm test | coveralls",
@@ -44,9 +47,11 @@
     "@types/mocha": "2.2.41",
     "@types/node": "8.0.12",
     "coveralls": "2.13.1",
+    "cpy-cli": "1.0.1",
     "mocha": "3.4.2",
     "nyc": "11.0.3",
     "open-cli": "1.0.5",
+    "rimraf": "2.6.1",
     "source-map-support": "0.4.15",
     "typescript": "2.4.1"
   },
