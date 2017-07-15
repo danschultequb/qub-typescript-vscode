@@ -2,7 +2,7 @@ import * as os from "os";
 import * as qub from "qub";
 import * as vscode from "vscode";
 
-import * as interfaces from "./Interfaces";
+import * as interfaces from "./interfaces";
 
 class Configuration implements interfaces.Configuration {
     constructor(private _configuration: vscode.WorkspaceConfiguration) {
