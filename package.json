@@ -1,6 +1,6 @@
 {
   "name": "qub-vscode",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A collection of common data structures and functions that make creating Visual Studio Code extensions easier.",
   "files": [
     "*.js",
@@ -56,7 +56,7 @@
     "typescript": "2.4.1"
   },
   "dependencies": {
-    "qub": "1.2.5",
+    "qub": "1.2.6",
     "vscode": "1.1.4"
   }
 }
