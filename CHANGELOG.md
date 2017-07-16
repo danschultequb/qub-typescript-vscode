@@ -1,3 +1,7 @@
+### 1.0.9 (2017-07-15)
+
+- Add LanguageExtension<T>.updateActiveDocumentParse() method
+
 ### 1.0.8 (2017-07-15)
 
 - Update Qub version
