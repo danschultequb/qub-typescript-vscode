@@ -1,3 +1,7 @@
+### 1.0.7 (2017-07-15)
+
+- Add back missing package files
+
 ### 1.0.6 (2017-07-15)
 
 - Flatten package for easier importing
