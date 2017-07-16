@@ -1,3 +1,7 @@
+### 1.0.8 (2017-07-15)
+
+- Update Qub version
+
 ### 1.0.7 (2017-07-15)
 
 - Add back missing package files
