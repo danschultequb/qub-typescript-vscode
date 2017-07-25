@@ -1,3 +1,5 @@
+import * as os from "os";
+import * as path from "path";
 import * as qub from "qub";
 
 /**
@@ -368,6 +370,15 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
 
     public get version(): string {
         return this._extensionVersion;
+    }
+
+    /**
+     * Get the file path to the settings file for this extension. This is the JSON file where
+     * details can be kept that need to be saved across VS Code sessions. This file may or may not
+     * exist.
+     */
+    public getSettingsFilePath(): string {
+        return path.join(os.homedir(), ".vscode", this.name + ".json");
     }
 
     public getConfigurationValue<T>(propertyPath: string, defaultValue?: T): T {
