@@ -1,4 +1,6 @@
 import * as assert from "assert";
+import * as os from "os";
+import * as path from "path";
 import * as qub from "qub";
 
 import * as interfaces from "../sources/interfaces";
@@ -758,6 +760,8 @@ suite("Mocks", () => {
                 const extension = new mocks.PlaintextLanguageExtension(undefined);
                 assert.deepStrictEqual(extension.name, "Plaintext Tools");
                 assert.deepStrictEqual(extension.version, "1.0.0");
+
+                assert.deepStrictEqual(extension.getSettingsFilePath(), path.join(os.homedir(), ".vscode", "Plaintext Tools.json"));
             });
 
             test("with a platform", () => {
@@ -765,6 +769,8 @@ suite("Mocks", () => {
                 const extension = new mocks.PlaintextLanguageExtension(platform);
                 assert.deepStrictEqual(extension.name, "Plaintext Tools");
                 assert.deepStrictEqual(extension.version, "1.0.0");
+
+                assert.deepStrictEqual(extension.getSettingsFilePath(), path.join(os.homedir(), ".vscode", "Plaintext Tools.json"));
 
                 platform.setActiveTextEditor(new mocks.TextEditor(undefined));
                 platform.setActiveTextEditor(undefined);
