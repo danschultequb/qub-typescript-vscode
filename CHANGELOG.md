@@ -1,3 +1,7 @@
+### 1.0.10 (2017-07-25)
+
+- Add LanguageExtension<T>.getSettingsFilePath() method
+
 ### 1.0.9 (2017-07-15)
 
 - Add LanguageExtension<T>.updateActiveDocumentParse() method
