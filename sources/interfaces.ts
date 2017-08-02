@@ -132,6 +132,11 @@ export interface TextEditor {
     getIndent(): string;
 
     /**
+     * Get the number of spaces that go into a single tab.
+     */
+    getTabLength(): number;
+
+    /**
      * Get the current newline string used by this editor (\n, \r\n, etc.).
      */
     getNewLine(): string;

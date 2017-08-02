@@ -96,6 +96,10 @@ class TextEditor implements interfaces.TextEditor {
         return this._textEditor.options.insertSpaces ? qub.repeat(" ", <number>this._textEditor.options.tabSize) : "\t";
     }
 
+    public getTabLength(): number {
+        return this._textEditor.options.tabSize as number;
+    }
+
     public getNewLine(): string {
         return "\n";
     }

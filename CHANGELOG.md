@@ -1,3 +1,7 @@
+### 1.0.12 (2017-08-02)
+
+- Add TextEditor.getTabLength()
+
 ### 1.0.11 (2017-08-02)
 
 - Update package dependency versions

@@ -121,7 +121,7 @@ export class TextEditor implements interfaces.TextEditor {
 
         this.setCursorIndex(startIndex + qub.getLength(text));
 
-        return 
+        return
     }
 
     public getIndent(): string {
@@ -130,6 +130,10 @@ export class TextEditor implements interfaces.TextEditor {
 
     public setIndent(indent: string): void {
         this._indent = indent;
+    }
+
+    public getTabLength(): number {
+        return 2;
     }
 
     public getNewLine(): string {
