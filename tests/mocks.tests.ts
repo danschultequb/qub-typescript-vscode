@@ -144,6 +144,7 @@ suite("Mocks", () => {
                 assert.deepStrictEqual(editor.getDocument(), undefined);
                 assert.deepStrictEqual(editor.getCursorIndex(), 0);
                 assert.deepStrictEqual(editor.getIndent(), "  ");
+                assert.deepStrictEqual(editor.getTabLength(), 2);
                 assert.deepStrictEqual(editor.getNewLine(), "\n");
             });
         });
