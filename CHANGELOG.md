@@ -1,3 +1,7 @@
+### 1.0.11 (2017-08-02)
+
+- Update package dependency versions
+
 ### 1.0.10 (2017-07-25)
 
 - Add LanguageExtension<T>.getSettingsFilePath() method
