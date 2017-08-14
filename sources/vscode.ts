@@ -1,10 +1,12 @@
 import * as os from "os";
 import * as qub from "qub";
+import * as fs from "qub-filesystem";
+import * as fsreal from "qub-filesystem/real";
 import * as vscode from "vscode";
 
-import * as interfaces from "./interfaces";
+import * as main from "./main";
 
-class Configuration implements interfaces.Configuration {
+class Configuration implements main.Configuration {
     constructor(private _configuration: vscode.WorkspaceConfiguration) {
     }
 
@@ -13,7 +15,7 @@ class Configuration implements interfaces.Configuration {
     }
 }
 
-class TextDocument implements interfaces.TextDocument {
+class TextDocument implements main.TextDocument {
     constructor(private _textDocument: vscode.TextDocument) {
     }
 
@@ -69,7 +71,7 @@ class TextDocument implements interfaces.TextDocument {
     }
 }
 
-class TextEditor implements interfaces.TextEditor {
+class TextEditor implements main.TextEditor {
     constructor(private _textEditor: vscode.TextEditor) {
     }
 
@@ -108,7 +110,7 @@ class TextEditor implements interfaces.TextEditor {
 /**
  * The VS Code implementation of the Platform interface.
  */
-export class Platform implements interfaces.Platform, interfaces.Disposable {
+export class Platform implements main.Platform, main.Disposable {
     private _diagnosticCollection: vscode.DiagnosticCollection;
     
     /**
@@ -121,21 +123,25 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
         }
     }
 
+    public getFileSystem(): fs.FileSystem {
+        return new fsreal.FileSystem();
+    }
+
     /**
      * Get the text editor that is active. If no text editor is active, then return undefined.
      */
-    public getActiveTextEditor(): interfaces.TextEditor {
+    public getActiveTextEditor(): main.TextEditor {
         const vscodeActiveTextEditor: vscode.TextEditor = vscode.window.activeTextEditor;
         return vscodeActiveTextEditor ? new TextEditor(vscodeActiveTextEditor) : undefined;
     }
 
     public getCursorIndex(): number {
-        const activeTextEditor: interfaces.TextEditor = this.getActiveTextEditor();
+        const activeTextEditor: main.TextEditor = this.getActiveTextEditor();
         return activeTextEditor ? activeTextEditor.getCursorIndex() : undefined;
     }
 
     public setCursorIndex(cursorIndex: number): void {
-        const activeTextEditor: interfaces.TextEditor = this.getActiveTextEditor();
+        const activeTextEditor: main.TextEditor = this.getActiveTextEditor();
         if (activeTextEditor) {
             activeTextEditor.setCursorIndex(cursorIndex);
         }
@@ -144,7 +150,7 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
     /**
      * Set the function to call when the active text editor in VSCode is changed.
      */
-    public setActiveEditorChangedCallback(callback: (editor: interfaces.TextEditor) => void): interfaces.Disposable {
+    public setActiveEditorChangedCallback(callback: (editor: main.TextEditor) => void): main.Disposable {
         return vscode.window.onDidChangeActiveTextEditor((vscodeTextEditor: vscode.TextEditor) => {
             callback(vscodeTextEditor ? new TextEditor(vscodeTextEditor) : undefined);
         });
@@ -153,14 +159,14 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
     /**
      * Set the function to call when the VS Code application's configuration is changed and saved.
      */
-    public setConfigurationChangedCallback(callback: () => void): interfaces.Disposable {
+    public setConfigurationChangedCallback(callback: () => void): main.Disposable {
         return vscode.workspace.onDidChangeConfiguration(callback);
     }
 
     /**
      * Set the function to call when a text document is opened.
      */
-    public setTextDocumentOpenedCallback(callback: (openedTextDocument: interfaces.TextDocument) => void): interfaces.Disposable {
+    public setTextDocumentOpenedCallback(callback: (openedTextDocument: main.TextDocument) => void): main.Disposable {
         return vscode.workspace.onDidOpenTextDocument((vscodeTextDocument: vscode.TextDocument) => {
             callback(vscodeTextDocument ? new TextDocument(vscodeTextDocument) : undefined);
         });
@@ -169,7 +175,7 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
     /**
      * Set the function to call when a text document is saved.
      */
-    public setTextDocumentSavedCallback(callback: (savedTextDocument: interfaces.TextDocument) => void): interfaces.Disposable {
+    public setTextDocumentSavedCallback(callback: (savedTextDocument: main.TextDocument) => void): main.Disposable {
         return vscode.workspace.onDidSaveTextDocument((vscodeTextDocument: vscode.TextDocument) => {
             callback(vscodeTextDocument ? new TextDocument(vscodeTextDocument) : undefined);
         });
@@ -178,12 +184,12 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
     /**
      * Set the function to call when a text document is changed.
      */
-    public setTextDocumentChangedCallback(callback: (textDocumentChange: interfaces.TextDocumentChange) => void): interfaces.Disposable {
+    public setTextDocumentChangedCallback(callback: (textDocumentChange: main.TextDocumentChange) => void): main.Disposable {
         return vscode.workspace.onDidChangeTextDocument((changeEvent: vscode.TextDocumentChangeEvent) => {
             const textEditor = new TextEditor(vscode.window.activeTextEditor);
             const textDocument = new TextDocument(changeEvent.document);
             for (const contentChange of changeEvent.contentChanges) {
-                callback(new interfaces.TextDocumentChange(textEditor, textDocument.toSpan(contentChange.range), contentChange.text));
+                callback(new main.TextDocumentChange(textEditor, textDocument.toSpan(contentChange.range), contentChange.text));
             }
         });
     }
@@ -191,7 +197,7 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
     /**
      * Set the function to call when a text document is closed.
      */
-    public setTextDocumentClosedCallback(callback: (closedTextDocument: interfaces.TextDocument) => void): vscode.Disposable {
+    public setTextDocumentClosedCallback(callback: (closedTextDocument: main.TextDocument) => void): vscode.Disposable {
         return vscode.workspace.onDidCloseTextDocument((closedTextDocument: vscode.TextDocument) => {
             callback(new TextDocument(closedTextDocument));
         });
@@ -201,11 +207,11 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
      * Set the function to call when the cursor hovers over a text document with the provided
      * language identifier.
      */
-    public setProvideHoverCallback(languageId: string, callback: (textDocument: interfaces.TextDocument, index: number) => interfaces.Hover): vscode.Disposable {
+    public setProvideHoverCallback(languageId: string, callback: (textDocument: main.TextDocument, index: number) => main.Hover): vscode.Disposable {
         return vscode.languages.registerHoverProvider(languageId, {
             provideHover(textDocument: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Hover {
                 const document = new TextDocument(textDocument);
-                const hover: interfaces.Hover = callback(document, textDocument.offsetAt(position));
+                const hover: main.Hover = callback(document, textDocument.offsetAt(position));
                 return hover ? new vscode.Hover(hover.textLines, document.toRange(hover.span)) : undefined;
             }
         });
@@ -215,20 +221,20 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
      * Set the function to call when one of the completion trigger characters is pressed on a text
      * document with provided language identifier.
      */
-    public setProvideCompletionsCallback(languageId: string, completionTriggerCharacters: string[], callback: (textDocument: interfaces.TextDocument, index: number) => qub.Iterable<interfaces.Completion>): interfaces.Disposable {
+    public setProvideCompletionsCallback(languageId: string, completionTriggerCharacters: string[], callback: (textDocument: main.TextDocument, index: number) => qub.Iterable<main.Completion>): main.Disposable {
         const completionItemProvider: vscode.CompletionItemProvider = {
             provideCompletionItems(textDocument: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.CompletionList {
                 const document = new TextDocument(textDocument);
                 const index: number = textDocument.offsetAt(position);
 
-                const completions: qub.Iterable<interfaces.Completion> = callback(document, index);
+                const completions: qub.Iterable<main.Completion> = callback(document, index);
 
                 let completionList: vscode.CompletionList;
                 if (completions && completions.any()) {
                     const wordRange: vscode.Range = textDocument.getWordRangeAtPosition(position);
                     const currentWord: string = wordRange && textDocument.getText(wordRange.with(void 0, position));
 
-                    completionList = new vscode.CompletionList(completions.map((completion: interfaces.Completion) => {
+                    completionList = new vscode.CompletionList(completions.map((completion: main.Completion) => {
                         const insertRange: vscode.Range = document.toRange(completion.span);
 
                         const vscodeCompletion = new vscode.CompletionItem(completion.label);
@@ -250,7 +256,7 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
         return vscode.languages.registerCompletionItemProvider(languageId, completionItemProvider, ...completionTriggerCharacters);
     }
 
-    public setProvideFormattedDocumentTextCallback(languageId: string, callback: (textDocument: interfaces.TextDocument) => string): interfaces.Disposable {
+    public setProvideFormattedDocumentTextCallback(languageId: string, callback: (textDocument: main.TextDocument) => string): main.Disposable {
         const documentFormattingEditProvider: vscode.DocumentFormattingEditProvider = {
             provideDocumentFormattingEdits(textDocument: vscode.TextDocument, options: vscode.FormattingOptions, token: vscode.CancellationToken): vscode.TextEdit[] {
                 const document = new TextDocument(textDocument);
@@ -268,7 +274,7 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
         return vscode.languages.registerDocumentFormattingEditProvider(languageId, documentFormattingEditProvider);
     }
 
-    public setTextDocumentIssues(extensionName: string, textDocument: interfaces.TextDocument, issues: qub.Iterable<qub.Issue>): void {
+    public setTextDocumentIssues(extensionName: string, textDocument: main.TextDocument, issues: qub.Iterable<qub.Issue>): void {
         if (!this._diagnosticCollection) {
             this._diagnosticCollection = vscode.languages.createDiagnosticCollection(extensionName);
         }
@@ -281,7 +287,7 @@ export class Platform implements interfaces.Platform, interfaces.Disposable {
     /**
      * Get the VSCode configuration file's contents.
      */
-    public getConfiguration(): interfaces.Configuration {
+    public getConfiguration(): main.Configuration {
         return new Configuration(vscode.workspace.getConfiguration());
     }
 

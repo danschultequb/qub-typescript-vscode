@@ -1,20 +1,20 @@
 import * as assert from "assert";
 import * as qub from "qub";
 
-import * as interfaces from "../sources/interfaces";
-import * as mocks from "../sources/mocks";
+import * as main from "../sources/main";
+import * as mock from "../sources/mock";
 
-suite("Interfaces", () => {
+suite("Main", () => {
     suite("Completion", () => {
         test("with no description", () => {
-            const completion = new interfaces.Completion("A", new qub.Span(1, 2));
+            const completion = new main.Completion("A", new qub.Span(1, 2));
             assert.deepStrictEqual(completion.label, "A");
             assert.deepStrictEqual(completion.span, new qub.Span(1, 2));
             assert.deepStrictEqual(completion.description, "");
         });
 
         test("with description", () => {
-            const completion = new interfaces.Completion("B", new qub.Span(3, 4), "C");
+            const completion = new main.Completion("B", new qub.Span(3, 4), "C");
             assert.deepStrictEqual(completion.label, "B");
             assert.deepStrictEqual(completion.span, new qub.Span(3, 4));
             assert.deepStrictEqual(completion.description, "C");
@@ -23,7 +23,7 @@ suite("Interfaces", () => {
 
     suite("Hover", () => {
         test("with one line", () => {
-            const hover = new interfaces.Hover(["Hello"], new qub.Span(5, 6));
+            const hover = new main.Hover(["Hello"], new qub.Span(5, 6));
             assert.deepStrictEqual(hover.textLines, ["Hello"]);
             assert.deepStrictEqual(hover.span, new qub.Span(5, 6));
         });
@@ -31,7 +31,7 @@ suite("Interfaces", () => {
 
     suite("TextDocumentChange", () => {
         test("insert text", () => {
-            const change = new interfaces.TextDocumentChange(undefined, new qub.Span(7, 0), "I'm an insertion!");
+            const change = new main.TextDocumentChange(undefined, new qub.Span(7, 0), "I'm an insertion!");
             assert.deepStrictEqual(change.editor, undefined);
             assert.deepStrictEqual(change.textDocument, undefined);
             assert.deepStrictEqual(change.span, new qub.Span(7, 0));
@@ -41,7 +41,7 @@ suite("Interfaces", () => {
         });
 
         test("delete text", () => {
-            const change = new interfaces.TextDocumentChange(null, new qub.Span(8, 9), "");
+            const change = new main.TextDocumentChange(null, new qub.Span(8, 9), "");
             assert.deepStrictEqual(change.editor, undefined);
             assert.deepStrictEqual(change.textDocument, undefined);
             assert.deepStrictEqual(change.span, new qub.Span(8, 9));
@@ -51,9 +51,9 @@ suite("Interfaces", () => {
         });
 
         test("replace text", () => {
-            const document = new mocks.TextDocument("MOCK_LANGUAGE", "mock://document.uri", "MOCK_DOCUMENT_TEXT");
-            const editor = new mocks.TextEditor(document)
-            const change = new interfaces.TextDocumentChange(editor, new qub.Span(0, 4), "HAPPY");
+            const document = new mock.TextDocument("MOCK_LANGUAGE", "mock://document.uri", "MOCK_DOCUMENT_TEXT");
+            const editor = new mock.TextEditor(document)
+            const change = new main.TextDocumentChange(editor, new qub.Span(0, 4), "HAPPY");
             assert.deepStrictEqual(change.editor, editor);
             assert.deepStrictEqual(change.textDocument, document);
             assert.deepStrictEqual(change.span, new qub.Span(0, 4));
@@ -63,7 +63,7 @@ suite("Interfaces", () => {
         });
     });
 
-    class PlainTextDocument implements interfaces.TextDocument {
+    class PlainTextDocument implements main.TextDocument {
         constructor(private _uri: string, private _text: string) {
         }
 
@@ -94,9 +94,9 @@ suite("Interfaces", () => {
 
     suite("ParsedDocumentChange", () => {
         test(`constructor()`, () => {
-            const parsedDocument = new mocks.TextDocument("MOCK_LANGUAGE_ID", "mock://document.uri");
-            const editor = new mocks.TextEditor(parsedDocument);
-            const change = new interfaces.ParsedDocumentChange(parsedDocument, editor, new qub.Span(0, 1), "Hello!");
+            const parsedDocument = new mock.TextDocument("MOCK_LANGUAGE_ID", "mock://document.uri");
+            const editor = new mock.TextEditor(parsedDocument);
+            const change = new main.ParsedDocumentChange(parsedDocument, editor, new qub.Span(0, 1), "Hello!");
             assert.deepStrictEqual(change.parsedDocument, parsedDocument);
         });
     });

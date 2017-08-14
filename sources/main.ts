@@ -1,6 +1,7 @@
-import * as os from "os";
-import * as path from "path";
+import * as moment from "moment";
 import * as qub from "qub";
+import * as fs from "qub-filesystem";
+import * as telemetry from "qub-telemetry";
 
 /**
  * An object that contains a dispose() method. dispose() is typically called right before an object
@@ -305,6 +306,11 @@ export interface Platform extends Disposable {
      * Get a string identifier for the operating system that VS Code is running on.
      */
     getOperatingSystem(): string;
+
+    /**
+     * Get a reference to the FileSystem.
+     */
+    getFileSystem(): fs.FileSystem;
 }
 
 /**
@@ -378,12 +384,72 @@ export abstract class LanguageExtension<ParsedDocumentType> implements Disposabl
     }
 
     /**
-     * Get the file path to the settings file for this extension. This is the JSON file where
-     * details can be kept that need to be saved across VS Code sessions. This file may or may not
-     * exist.
+     * Get the settings file for this extension. This is the JSON file where details can be kept
+     * that need to be saved across VS Code sessions. This file may or may not exist.
      */
-    public getSettingsFilePath(): string {
-        return path.join(os.homedir(), ".vscode", this.name + ".json");
+    public getSettingsFile(): fs.File {
+        return this._platform ? this._platform.getFileSystem().getUserHomeFolder().getFile(`.vscode/${this.name}.json`) : undefined;
+    }
+
+    /**
+     * Write an activation telemetry event to the telemetry Endpoint that is created by the
+     * provided telemetryCreator function.
+     * @param telemetryCreator The function that will be used to create a telemetry Endpoint to send
+     *      the activation telemetry to.
+     */
+    public writeActivationTelemetry(telemetryCreator: () => telemetry.Endpoint): void {
+        const now: moment.Moment = moment();
+        const year: number = now.year();
+        const month: number = now.month() + 1;
+        const dayOfMonth: number = now.date();
+        this.writeActivationTelemetryWithDate(telemetryCreator, year, month, dayOfMonth);
+    }
+
+    /**
+     * Write an activation telemetry event to the telemetry Endpoint that is created by the
+     * provided telemetryCreator function.
+     * @param telemetryCreator The function that will be used to create a telemetry Endpoint to send
+     *      the activation telemetry to.
+     * @param year The current year.
+     * @param month The current month (The first month is 1).
+     * @param dayOfMonth The current day of the month (The first day is 1).
+     */
+    public writeActivationTelemetryWithDate(telemetryCreator: () => telemetry.Endpoint, year: number, month: number, dayOfMonth: number): void {
+        if (telemetryCreator) {
+            const telemetryEnabled: boolean = this.getConfigurationValue("telemetry.enabled", true);
+            if (telemetryEnabled) {
+                const endpoint: telemetry.Endpoint = telemetryCreator();
+                if (endpoint) {
+                    const settingsFile: fs.File = this.getSettingsFile();
+                    const settingsFileContents: string = settingsFile.readContentsAsString();
+                    const settingsJSON: any = settingsFileContents ? JSON.parse(settingsFileContents) : {};
+
+                    const lastActivationDateAndTimeName: string = "lastActivationDateAndTime";
+                    const lastActivationDateAndTime: string = settingsJSON[lastActivationDateAndTimeName];
+
+                    const pad = (value: number) => {
+                        let valueString: string = value.toString();
+                        if (valueString.length === 1) {
+                            valueString = "0" + valueString;
+                        }
+                        return valueString;
+                    };
+                    const nowDateAndTime: string = `${year}-${pad(month)}-${pad(dayOfMonth)}`;
+                    if (lastActivationDateAndTime !== nowDateAndTime) {
+                        endpoint.write(new telemetry.Event("Activated", {
+                            extensionVersion: this.version,
+                            machineId: this._platform.getMachineId()
+                        }));
+                        endpoint.close();
+
+                        settingsJSON[lastActivationDateAndTimeName] = nowDateAndTime;
+
+                        const settingsJSONString: string = JSON.stringify(settingsJSON)
+                        settingsFile.writeContentsAsString(settingsJSONString);
+                    }
+                }
+            }
+        }
     }
 
     public getConfigurationValue<T>(propertyPath: string, defaultValue?: T): T {

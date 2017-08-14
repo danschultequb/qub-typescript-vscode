@@ -1,13 +1,15 @@
 import * as qub from "qub";
+import * as fs from "qub-filesystem";
+import * as mockfs from "qub-filesystem/mock";
 
-import * as interfaces from "./interfaces";
+import * as main from "./main";
 
-export class Disposable implements interfaces.Disposable {
+export class Disposable implements main.Disposable {
     public dispose(): void {
     }
 }
 
-export class Configuration implements interfaces.Configuration {
+export class Configuration implements main.Configuration {
     constructor(private _values: Object = {}) {
     }
 
@@ -38,7 +40,7 @@ export class Configuration implements interfaces.Configuration {
     }
 }
 
-export class TextDocument implements interfaces.TextDocument {
+export class TextDocument implements main.TextDocument {
     constructor(private _languageId: string, private _uri: string, private _text?: string) {
         if (!this._text) {
             this._text = "";
@@ -93,7 +95,7 @@ export class TextDocument implements interfaces.TextDocument {
     }
 }
 
-export class TextEditor implements interfaces.TextEditor {
+export class TextEditor implements main.TextEditor {
     private _cursorIndex: number = 0;
     private _indent: string = "  ";
     private _newline: string = "\n";
@@ -113,7 +115,7 @@ export class TextEditor implements interfaces.TextEditor {
         this._cursorIndex = cursorIndex;
     }
 
-    public insert(startIndex: number, text: string): interfaces.Thenable<boolean> {
+    public insert(startIndex: number, text: string): main.Thenable<boolean> {
         const documentText: string = this._document.getText();
         const beforeInsert: string = startIndex < 0 ? "" : documentText.substr(0, startIndex);
         const afterInsert: string = startIndex < documentText.length ? documentText.substr(startIndex) : "";
@@ -145,33 +147,38 @@ export class TextEditor implements interfaces.TextEditor {
     }
 }
 
-export class Platform implements interfaces.Platform {
-    private _activeTextEditor: interfaces.TextEditor;
-    private _configuration: interfaces.Configuration;
+export class Platform implements main.Platform {
+    private _activeTextEditor: main.TextEditor;
+    private _configuration: main.Configuration;
     private _installedExtensions = new qub.Map<string, qub.List<string>>();
     private _textDocumentIssues = new qub.Map<string, qub.Iterable<qub.Issue>>();
+    private _fileSystem: fs.FileSystem = new mockfs.FileSystem();
 
-    private _configurationChanged: (newConfiguration: interfaces.Configuration) => void;
-    private _activeEditorChanged: (editor: interfaces.TextEditor) => void;
-    private _textDocumentOpened: (openedTextDocument: interfaces.TextDocument) => void;
-    private _textDocumentSaved: (savedTextDocument: interfaces.TextDocument) => void;
-    private _textDocumentChanged: (textDocumentChange: interfaces.TextDocumentChange) => void;
-    private _textDocumentClosed: (closedTextDocument: interfaces.TextDocument) => void;
-    private _provideHover: (textDocument: interfaces.TextDocument, index: number) => interfaces.Hover;
-    private _provideCompletions: (textDocument: interfaces.TextDocument, index: number) => qub.Iterable<interfaces.Completion>;
-    private _provideFormattedDocument: (textDocument: interfaces.TextDocument) => string;
+    private _configurationChanged: (newConfiguration: main.Configuration) => void;
+    private _activeEditorChanged: (editor: main.TextEditor) => void;
+    private _textDocumentOpened: (openedTextDocument: main.TextDocument) => void;
+    private _textDocumentSaved: (savedTextDocument: main.TextDocument) => void;
+    private _textDocumentChanged: (textDocumentChange: main.TextDocumentChange) => void;
+    private _textDocumentClosed: (closedTextDocument: main.TextDocument) => void;
+    private _provideHover: (textDocument: main.TextDocument, index: number) => main.Hover;
+    private _provideCompletions: (textDocument: main.TextDocument, index: number) => qub.Iterable<main.Completion>;
+    private _provideFormattedDocument: (textDocument: main.TextDocument) => string;
 
     public dispose(): void {
+    }
+
+    public getFileSystem(): fs.FileSystem {
+        return this._fileSystem;
     }
 
     /**
      * Invoke a hover action at the provided index of the active text editor.
      */
-    public getHoverAt(characterIndex: number): interfaces.Hover {
-        let result: interfaces.Hover;
+    public getHoverAt(characterIndex: number): main.Hover {
+        let result: main.Hover;
 
         if (this._provideHover && qub.isDefined(characterIndex) && this._activeTextEditor) {
-            const activeDocument: interfaces.TextDocument = this._activeTextEditor.getDocument();
+            const activeDocument: main.TextDocument = this._activeTextEditor.getDocument();
             if (activeDocument) {
                 result = this._provideHover(activeDocument, characterIndex);
             }
@@ -183,18 +190,18 @@ export class Platform implements interfaces.Platform {
     /**
      * Invoke a get completions action at the provided index of the active text editor.
      */
-    public getCompletionsAt(index: number): qub.Iterable<interfaces.Completion> {
-        let result: qub.Iterable<interfaces.Completion>;
+    public getCompletionsAt(index: number): qub.Iterable<main.Completion> {
+        let result: qub.Iterable<main.Completion>;
 
         if (this._provideCompletions && qub.isDefined(index) && this._activeTextEditor) {
-            const activeDocument: interfaces.TextDocument = this._activeTextEditor.getDocument();
+            const activeDocument: main.TextDocument = this._activeTextEditor.getDocument();
             if (activeDocument) {
                 result = this._provideCompletions(activeDocument, index);
             }
         }
 
         if (!result) {
-            result = new qub.SingleLinkList<interfaces.Completion>();
+            result = new qub.SingleLinkList<main.Completion>();
         }
 
         return result;
@@ -204,7 +211,7 @@ export class Platform implements interfaces.Platform {
         let result: string;
 
         if (this._provideFormattedDocument && this._activeTextEditor) {
-            const activeDocument: interfaces.TextDocument = this._activeTextEditor.getDocument();
+            const activeDocument: main.TextDocument = this._activeTextEditor.getDocument();
             if (activeDocument) {
                 result = this._provideFormattedDocument(activeDocument);
             }
@@ -228,11 +235,11 @@ export class Platform implements interfaces.Platform {
         }
     }
 
-    public getActiveTextEditor(): interfaces.TextEditor {
+    public getActiveTextEditor(): main.TextEditor {
         return this._activeTextEditor;
     }
 
-    public setActiveTextEditor(activeTextEditor: interfaces.TextEditor): void {
+    public setActiveTextEditor(activeTextEditor: main.TextEditor): void {
         if (this._activeTextEditor !== activeTextEditor) {
             this._activeTextEditor = activeTextEditor;
 
@@ -271,7 +278,7 @@ export class Platform implements interfaces.Platform {
             this._textDocumentClosed(textDocument);
         }
 
-        const activeTextEditor: interfaces.TextEditor = this.getActiveTextEditor();
+        const activeTextEditor: main.TextEditor = this.getActiveTextEditor();
         if (activeTextEditor && activeTextEditor.getDocument() === textDocument) {
             this.setActiveTextEditor(undefined);
         }
@@ -284,58 +291,58 @@ export class Platform implements interfaces.Platform {
         if (this._activeTextEditor && this._activeTextEditor.getDocument()) {
             this._activeTextEditor.insert(startIndex, text);
             if (this._textDocumentChanged) {
-                const change = new interfaces.TextDocumentChange(this._activeTextEditor, new qub.Span(startIndex, 0), text);
+                const change = new main.TextDocumentChange(this._activeTextEditor, new qub.Span(startIndex, 0), text);
                 this._textDocumentChanged(change);
             }
         }
     }
 
-    public setActiveEditorChangedCallback(activeEditorChanged: (editor: interfaces.TextEditor) => void): interfaces.Disposable {
+    public setActiveEditorChangedCallback(activeEditorChanged: (editor: main.TextEditor) => void): main.Disposable {
         this._activeEditorChanged = activeEditorChanged;
         return new Disposable();
     }
 
-    public setConfigurationChangedCallback(callback: () => void): interfaces.Disposable {
+    public setConfigurationChangedCallback(callback: () => void): main.Disposable {
         this._configurationChanged = callback;
         return new Disposable();
     }
 
-    public setTextDocumentOpenedCallback(callback: (openedTextDocument: interfaces.TextDocument) => void): interfaces.Disposable {
+    public setTextDocumentOpenedCallback(callback: (openedTextDocument: main.TextDocument) => void): main.Disposable {
         this._textDocumentOpened = callback;
         return new Disposable();
     }
 
-    public setTextDocumentSavedCallback(callback: (savedTextDocument: interfaces.TextDocument) => void): interfaces.Disposable {
+    public setTextDocumentSavedCallback(callback: (savedTextDocument: main.TextDocument) => void): main.Disposable {
         this._textDocumentSaved = callback;
         return new Disposable();
     }
 
-    public setTextDocumentChangedCallback(callback: (textDocumentChange: interfaces.TextDocumentChange) => void): interfaces.Disposable {
+    public setTextDocumentChangedCallback(callback: (textDocumentChange: main.TextDocumentChange) => void): main.Disposable {
         this._textDocumentChanged = callback;
         return new Disposable();
     }
 
-    public setTextDocumentClosedCallback(callback: (closedTextDocument: interfaces.TextDocument) => void): interfaces.Disposable {
+    public setTextDocumentClosedCallback(callback: (closedTextDocument: main.TextDocument) => void): main.Disposable {
         this._textDocumentClosed = callback;
         return new Disposable();
     }
 
-    public setProvideHoverCallback(languageId: string, callback: (textDocument: interfaces.TextDocument, index: number) => interfaces.Hover): interfaces.Disposable {
+    public setProvideHoverCallback(languageId: string, callback: (textDocument: main.TextDocument, index: number) => main.Hover): main.Disposable {
         this._provideHover = callback;
         return new Disposable();
     }
 
-    public setProvideCompletionsCallback(languageId: string, completionTriggerCharacters: string[], callback: (textDocument: interfaces.TextDocument, index: number) => qub.Iterable<interfaces.Completion>): interfaces.Disposable {
+    public setProvideCompletionsCallback(languageId: string, completionTriggerCharacters: string[], callback: (textDocument: main.TextDocument, index: number) => qub.Iterable<main.Completion>): main.Disposable {
         this._provideCompletions = callback;
         return new Disposable();
     }
 
-    public setProvideFormattedDocumentTextCallback(languageId: string, callback: (textDocument: interfaces.TextDocument) => string): interfaces.Disposable {
+    public setProvideFormattedDocumentTextCallback(languageId: string, callback: (textDocument: main.TextDocument) => string): main.Disposable {
         this._provideFormattedDocument = callback;
         return new Disposable();
     }
 
-    public setTextDocumentIssues(extensionName: string, textDocument: interfaces.TextDocument, issues: qub.Iterable<qub.Issue>): void {
+    public setTextDocumentIssues(extensionName: string, textDocument: main.TextDocument, issues: qub.Iterable<qub.Issue>): void {
         this._textDocumentIssues.add(textDocument ? textDocument.getURI() : undefined, issues);
     }
 
@@ -347,11 +354,11 @@ export class Platform implements interfaces.Platform {
         return result;
     }
 
-    public getConfiguration(): interfaces.Configuration {
+    public getConfiguration(): main.Configuration {
         return this._configuration;
     }
 
-    public setConfiguration(configuration: interfaces.Configuration): void {
+    public setConfiguration(configuration: main.Configuration): void {
         if (this._configuration !== configuration) {
             this._configuration = configuration;
             if (this._configurationChanged) {
@@ -391,12 +398,12 @@ export class PlaintextDocument {
     }
 }
 
-export class PlaintextLanguageExtension extends interfaces.LanguageExtension<PlaintextDocument> {
-    constructor(platform: interfaces.Platform) {
+export class PlaintextLanguageExtension extends main.LanguageExtension<PlaintextDocument> {
+    constructor(platform: main.Platform) {
         super("Plaintext Tools", "1.0.0", "txt", platform);
     }
 
-    public isParsable(textDocument: interfaces.TextDocument): boolean {
+    public isParsable(textDocument: main.TextDocument): boolean {
         return textDocument && textDocument.getLanguageId() === "txt" ? true : false;
     }
 
