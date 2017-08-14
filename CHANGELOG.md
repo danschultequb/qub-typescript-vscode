@@ -1,3 +1,7 @@
+### 1.1.0 (2017-08-06)
+
+- Add LanguageExtension<T>.writeActivationTelemetry() method
+
 ### 1.0.12 (2017-08-02)
 
 - Add TextEditor.getTabLength()
