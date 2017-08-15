@@ -1,3 +1,7 @@
+### 1.1.1 (2017-08-14)
+
+- Update dependencies
+
 ### 1.1.0 (2017-08-06)
 
 - Add LanguageExtension<T>.writeActivationTelemetry() method
